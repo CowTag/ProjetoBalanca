@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cowtag
+      POSTGRES_PASSWORD: cowtag
+      POSTGRES_DB: cowtag
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cowtag"]
+      interval: 5s
+      retries: 10
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    volumes: [./infra/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro]
+
+volumes:
+  pgdata:

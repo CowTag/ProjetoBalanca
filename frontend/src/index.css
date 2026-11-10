@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Fundo creme com textura sutil de pasto */
+  .pasture-bg {
+    background-color: #fbfaf5;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(169, 212, 151, 0.18), transparent 45%),
+      radial-gradient(circle at 90% 10%, rgba(207, 231, 240, 0.35), transparent 40%),
+      radial-gradient(rgba(104, 166, 83, 0.07) 1px, transparent 1px);
+    background-size: auto, auto, 22px 22px;
+    background-attachment: fixed;
+  }
+  ::selection { background: #cbe6bf; }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-xl border border-palha-200 bg-white/90 px-3 py-2 text-sm outline-none transition
+      placeholder:text-palha-400 focus:border-pasto-400 focus:ring-4 focus:ring-pasto-100;
+  }
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-palha-500;
+  }
+  .th {
+    @apply px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide text-palha-500;
+  }
+  .td {
+    @apply whitespace-nowrap px-3 py-2.5 text-sm;
+  }
+  .row-hover {
+    @apply transition-colors hover:bg-pasto-50/70;
+  }
+}
+
+@keyframes flash { from { background: #e4f2dd; } to { background: transparent; } }
+.flash { animation: flash 2.5s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

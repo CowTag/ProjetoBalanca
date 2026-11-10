@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Funcao {
+  admin
+  operador
+}
+
+enum Sexo {
+  M
+  F
+}
+
+enum StatusAnimal {
+  ativo
+  vendido
+  obito
+}
+
+model Farm {
+  id            String   @id @default(uuid())
+  nome          String
+  localizacao   String?
+  area_hectares Float?
+  criado_em     DateTime @default(now())
+
+  users   User[]
+  animals Animal[]
+  devices Device[]
+
+  @@map("farms")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  nome       String
+  email      String   @unique
+  senha_hash String
+  funcao     Funcao   @default(operador)
+  fazenda_id String
+  criado_em  DateTime @default(now())
+
+  fazenda Farm @relation(fields: [fazenda_id], references: [id], onDelete: Cascade)
+
+  @@index([fazenda_id])
+  @@map("users")
+}
+
+model Animal {
+  id              String       @id @default(uuid())
+  tag_rfid        String       @unique
+  brinco_visual   String
+  raca            String?
+  data_nascimento DateTime?    @db.Date
+  sexo            Sexo
+  status          StatusAnimal @default(ativo)
+  fazenda_id      String
+  criado_em       DateTime     @default(now())
+
+  fazenda Farm        @relation(fields: [fazenda_id], references: [id], onDelete: Cascade)
+  pesagens WeightLog[]
+
+  @@index([fazenda_id, status])
+  @@map("animals")
+}
+
+model Device {
+  id                  String    @id @default(uuid())
+  identificador_esp32 String    @unique
+  nome                String
+  status_online       Boolean   @default(false)
+  ultimo_contato      DateTime?
+  api_key_hash        String
+  fazenda_id          String
+  criado_em           DateTime  @default(now())
+
+  fazenda   Farm        @relation(fields: [fazenda_id], references: [id], onDelete: Cascade)
+  pesagens  WeightLog[]
+  sensores  SensorLog[]
+
+  @@map("devices")
+}
+
+model WeightLog {
+  id             String   @id @default(uuid())
+  animal_id      String
+  dispositivo_id String?
+  peso_kg        Float
+  timestamp      DateTime @default(now()) @db.Timestamptz(3)
+
+  animal      Animal  @relation(fields: [animal_id], references: [id], onDelete: Cascade)
+  dispositivo Device? @relation(fields: [dispositivo_id], references: [id], onDelete: SetNull)
+
+  @@index([animal_id, timestamp])
+  @@index([timestamp])
+  @@map("weight_logs")
+}
+
+model SensorLog {
+  id             String   @id @default(uuid())
+  dispositivo_id String
+  tipo_sensor    String
+  valor          Float
+  timestamp      DateTime @default(now()) @db.Timestamptz(3)
+
+  dispositivo Device @relation(fields: [dispositivo_id], references: [id], onDelete: Cascade)
+
+  @@index([dispositivo_id, tipo_sensor, timestamp])
+  @@map("sensor_logs")
+}
