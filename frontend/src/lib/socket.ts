@@ -4,9 +4,16 @@ import { apiBase, tokenStore } from './api';
 
 let socket: Socket | null = null;
 
+// Na Vercel o backend é serverless e não mantém WebSocket: o socket não conecta.
+const REALTIME_ENABLED = import.meta.env.VITE_REALTIME !== 'false';
+
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(apiBase || undefined, { auth: { token: tokenStore.get() }, transports: ['websocket', 'polling'] });
+    socket = io(apiBase || undefined, {
+      auth: { token: tokenStore.get() },
+      transports: ['websocket', 'polling'],
+      autoConnect: REALTIME_ENABLED,
+    });
   }
   return socket;
 }

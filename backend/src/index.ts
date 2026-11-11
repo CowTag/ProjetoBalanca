@@ -42,21 +42,27 @@ app.use('/api/v1', requireUser, farmRouter);          // /farm, /users
 
 app.use(errorHandler);
 
-const server = http.createServer(app);
-initRealtime(server);
-startMqttBridge();
+// Na Vercel (serverless) não há processo contínuo: sem WebSocket, MQTT nem timers.
+// O app é exportado e a Vercel cuida de cada requisição.
+if (!process.env.VERCEL) {
+  const server = http.createServer(app);
+  initRealtime(server);
+  startMqttBridge();
 
-// Marca como offline dispositivos sem contato recente
-setInterval(async () => {
-  const limite = new Date(Date.now() - env.DEVICE_OFFLINE_AFTER_S * 1000);
-  const stale = await prisma.device.findMany({
-    where: { status_online: true, OR: [{ ultimo_contato: null }, { ultimo_contato: { lt: limite } }] },
-  });
-  for (const d of stale) {
-    await prisma.device.update({ where: { id: d.id }, data: { status_online: false } });
-    emitToFarm(d.fazenda_id, 'device:status', { id: d.id, status_online: false, ultimo_contato: d.ultimo_contato });
-    console.log(`[DEVICE] ${d.identificador_esp32} offline`);
-  }
-}, 15_000);
+  // Marca como offline dispositivos sem contato recente
+  setInterval(async () => {
+    const limite = new Date(Date.now() - env.DEVICE_OFFLINE_AFTER_S * 1000);
+    const stale = await prisma.device.findMany({
+      where: { status_online: true, OR: [{ ultimo_contato: null }, { ultimo_contato: { lt: limite } }] },
+    });
+    for (const d of stale) {
+      await prisma.device.update({ where: { id: d.id }, data: { status_online: false } });
+      emitToFarm(d.fazenda_id, 'device:status', { id: d.id, status_online: false, ultimo_contato: d.ultimo_contato });
+      console.log(`[DEVICE] ${d.identificador_esp32} offline`);
+    }
+  }, 15_000);
 
-server.listen(env.PORT, '0.0.0.0', () => console.log(`CowTag API em http://0.0.0.0:${env.PORT}`));
+  server.listen(env.PORT, '0.0.0.0', () => console.log(`CowTag API em http://0.0.0.0:${env.PORT}`));
+}
+
+export default app;
