@@ -163,9 +163,27 @@ Tabelas e campos conforme a especificação (`farms`, `users`, `animals`, `devic
 
 ---
 
-## 5. Próximos passos sugeridos
+## 5. Deploy (Vercel + Supabase)
 
-- Supabase: o schema Prisma funciona direto apontando `DATABASE_URL` para o Postgres do Supabase.
+1. Crie um projeto em [supabase.com](https://supabase.com) (região `South America (São Paulo)`), guarde a senha do banco.
+2. Em **Connect → ORMs → Prisma** copie as duas URLs:
+   - `DATABASE_URL` — pooler *transaction*, porta **6543**, com `?pgbouncer=true&connection_limit=1`
+   - `DIRECT_URL` — porta **5432** (usada só pelas migrations)
+3. Crie as tabelas e os dados demo a partir do seu PC (com as URLs do Supabase no `backend/.env`):
+   ```bash
+   cd backend
+   npx prisma migrate deploy
+   npm run db:seed
+   ```
+4. Na Vercel (**Settings → Environment Variables**): `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`.
+5. No firmware, `API_BASE_URL` passa a ser `https://SEU-PROJETO.vercel.app`.
+
+> Na Vercel não há Socket.io, MQTT nem marcação automática de offline (serverless). O ESP32 usa HTTP.
+
+---
+
+## 6. Próximos passos sugeridos
+
 - Firmware via MQTT (PubSubClient) usando os tópicos já suportados pelo backend.
 - Buffer offline persistente em LittleFS (hoje é em RAM).
 - OTA (ArduinoOTA) e provisionamento de Wi-Fi (WiFiManager).
