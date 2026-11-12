@@ -195,9 +195,8 @@ Tabelas e campos conforme a especificação (`farms`, `users`, `animals`, `devic
 
 ---
 
-## 5. Próximos passos sugeridos
+## 5. Próximos passos 
 
-- Supabase: o schema Prisma funciona direto apontando `DATABASE_URL` para o Postgres do Supabase.
 - Firmware via MQTT (PubSubClient) usando os tópicos já suportados pelo backend.
 - Buffer offline persistente em LittleFS (hoje é em RAM).
 - OTA (ArduinoOTA) e provisionamento de Wi-Fi (WiFiManager).
