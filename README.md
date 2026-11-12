@@ -4,8 +4,8 @@
 ┌────────────── ESP32 ──────────────┐        HTTP POST /api/v1/weighings        ┌──────────── Backend (Node/TS) ────────────┐
 │ MFRC522 ─┐                        │  ───────────────────────────────────────▶ │ Express + Zod + Prisma ──▶ PostgreSQL     │
 │ HX711  ──┼─ FreeRTOS (3 tasks) ───┤        POST /api/v1/telemetry             │ Ponte MQTT (opcional, cowtag/+/pesagem)   │
-│ OLED   ──┤  buffer offline + NTP  │  ◀── 201 {brinco, ganho_kg} / 404 / 409   │ Socket.io ──▶ eventos em tempo real       │
-│ Buzzer ──┘                        │                                           └───────────────────┬───────────────────────┘
+│ LED    ──┤  buffer offline + NTP  │  ◀── 201 {brinco, ganho_kg} / 404 / 409   │ Socket.io ──▶ eventos em tempo real       │
+│ Web local┘ (status no celular)    │                                           └───────────────────┬───────────────────────┘
 └───────────────────────────────────┘                                                               │ REST + WebSocket
                                                                            ┌────────────────────────▼──────────────────────┐
                                                                            │ Dashboard React + Vite + Tailwind + Recharts  │
@@ -58,6 +58,14 @@ curl -X POST http://localhost:3000/api/v1/weighings \
 
 Abra o dashboard ao lado — a pesagem aparece em "Pesagens ao vivo" instantaneamente.
 
+Simulando o painel "Balança ao vivo":
+
+```bash
+curl -X POST http://localhost:3000/api/v1/live \
+  -H "Content-Type: application/json" -H "X-Device-Key: dev-key-balanca-01" \
+  -d '{"device_id":"BALANCA_ESP32_01","estado":"ESTABILIZANDO","peso_kg":0.448,"estavel":false,"tag":"43:A2:89:C1","mensagem":"aguardando"}'
+```
+
 Via MQTT (com `mosquitto_pub`):
 
 ```bash
@@ -82,12 +90,21 @@ mosquitto_sub -t 'cowtag/+/resposta'
 | **HX711** | DT (DOUT) | GPIO 32 |
 | | SCK | GPIO 33 |
 | | VCC / GND | 3V3 / GND |
-| **OLED SSD1306 I2C** | SDA / SCL | GPIO 21 / 22 |
-| | VCC / GND | 3V3 / GND |
-| **Buzzer** | + | GPIO 25 (via transistor se for > 20 mA) |
-| **Célula 1 kg → HX711** | Vermelho E+, Preto E−, Branco A−, Verde A+ | — |
+| **LED de status** | — | GPIO 2 (LED azul já presente no DevKit) |
+| **OLED SSD1306 I2C** *(opcional, `USE_OLED 1`)* | SDA / SCL | GPIO 21 / 22 |
+| **Célula 5 kg (barra) → HX711** | Vermelho E+, Preto E−, Branco A−, Verde A+ | — |
 
 > O MFRC522 **não** tolera 5 V. Bateria opcional: divisor 100k/100k em GPIO 34 e `PIN_BATTERY 34`.
+
+### Montagem física (protótipo)
+
+- O ESP32 DevKit é largo demais para uma protoboard só. Montagem usada: **protoboard de 60 linhas à esquerda + protoboard de 30 à direita**, ESP32 atravessando a emenda.
+  - Placa de 60 (lado 3V3/32/33/27/GND): HX711 e célula de carga.
+  - Placa de 30 (lado 23/22/21/19/18/5): OLED, se for usado.
+  - MFRC522 fora das placas, via jumpers macho-fêmea; RST (GPIO 27) com jumper longo passando sob o ESP32.
+  - **Pontes obrigatórias**: jumper ligando o trilho + das duas placas e outro ligando os trilhos − (o 3V3 do ESP32 fica do lado da placa de 60).
+- **Célula de carga em barra precisa ser montada em "Z"**: uma ponta parafusada na base com espaçador por baixo, a outra ponta parafusada no prato com espaçador por cima, com folga nos dois lados e nada encostando no meio da barra. Seta gravada na célula apontando para baixo.
+- **Diagnóstico — leitura reage ao toque e não ao peso**: entrada do HX711 flutuando (fio da célula partido/solto ou GND não comum). Medir com multímetro (fios soltos do HX711): E+↔E− e A+↔A− ≈ 1000 Ω, E↔A ≈ 750 Ω, qualquer fio ↔ corpo metálico = aberto. Fios finos da célula devem ser soldados em header, não espetados direto na protoboard. Alguns HX711 verdes baratos têm E− sem ligação ao GND: ligar E− ao GND com jumper.
 
 ### Gravando o firmware
 
@@ -99,22 +116,35 @@ mosquitto_sub -t 'cowtag/+/resposta'
 No monitor Serial (115200):
 
 1. Balança vazia → `t` (tara)
-2. Coloque um peso conhecido (ex. 200 g) → `c 200`
+2. Coloque um peso conhecido → `c <gramas>`. Com a célula de 5 kg, prefira um peso maior (ex. 500 g ou 1000 g → `c 500`) para um fator mais preciso. A calibração também pode ser feita pela página local do ESP32.
 3. `i` mostra peso atual e o fator salvo na flash.
 
 ### Lógica da pesagem
 
-1. **taskScale** lê o HX711 a ~10 Hz e mantém uma **média móvel** de 10 amostras. A leitura é *estável* quando `max − min` da janela ≤ 4 g e o peso ≥ 20 g.
-2. **taskFlow** detecta a tag → bip curto → espera estabilizar (até 10 s) → captura → bip → OLED “Enviando…”.
-3. **taskNet** faz o POST. Respostas exibidas no OLED:
-   - `201` **REGISTRADO** + brinco + ganho desde a última pesagem (bip duplo agudo)
-   - `404` **TAG NAO CADASTRADA** + UID (bip grave) → cadastre o UID no dashboard
-   - `409` **ANIMAL INATIVO** (vendido/óbito)
-   - sem rede / 5xx → **SALVO OFFLINE**: fica num buffer de 32 pesagens e é reenviado com backoff exponencial. O backend é idempotente (mesmo animal + dispositivo + timestamp não duplica).
-4. A mesma tag é ignorada por 15 s (evita pesar o mesmo animal duas vezes).
+1. **taskScale** lê o HX711 a ~10 Hz e mantém uma **média móvel** de 10 amostras. A leitura é *estável* quando `max − min` da janela ≤ 4 g e o peso ≥ 20 g. (Com célula de 5 kg o ruído é maior; se a leitura nunca estabilizar, aumentar `STABLE_TOLERANCE_KG` para ~0.010.)
+2. **taskFlow** detecta a tag → espera estabilizar (até 10 s) → captura → entrega para envio.
+3. **taskNet** faz o POST. Resultados (estado ao vivo):
+   - `201` **REGISTRADO** + brinco + ganho desde a última pesagem
+   - `404` **TAG_NAO_CADASTRADA** → cadastre o UID no dashboard
+   - `409` **ANIMAL_INATIVO** (vendido/óbito)
+   - sem rede / 5xx → **SALVO_OFFLINE**: buffer de 32 pesagens, reenviado com backoff exponencial. O backend é idempotente.
+4. A mesma tag é ignorada por 15 s.
 5. Telemetria a cada 30 s: `rssi_wifi`, `temperatura_chip`, `heap_livre_kb`, `uptime_s`, `fila_pendente`, `bateria_v`.
 
-> **Modo maquete:** com célula de 1 kg, `WEIGHT_SCALE_MULTIPLIER 1000.0` faz 450 g virar 450 kg — útil para demonstrar gráficos de GMD realistas junto com o seed.
+### Acompanhando a balança (sem buzzer e sem display)
+
+| Onde | Como abrir | O que mostra |
+|---|---|---|
+| **Dashboard → "Balança ao vivo"** | Painel e página Balanças | peso atual, estável/oscilando, etapa, tag, resultado, fila offline, eventos recentes |
+| **Página local do ESP32** | `http://cowtag-balanca.local` ou `http://<IP>` (mesma rede) | o mesmo, + botões de **Tara** e **Calibrar**. Funciona mesmo sem backend |
+| **Monitor Serial** | `pio device monitor` | `[ESTADO]`, `[PESO]`, `[NET]` linha a linha |
+| **LED azul (GPIO 2)** | na placa | 1 piscada = tag lida · aceso = estabilizando · 2 = registrado · 1 longa = erro · 3 = offline · pisca lento = sem Wi-Fi |
+
+O ESP32 envia o estado ao vivo para `POST /api/v1/live` quando algo muda (no máximo 1×/s, e a cada 10 s sem mudança). Esse estado fica só em memória no backend, não é gravado no banco, e chega ao dashboard pelo evento Socket.io `scale:live`. O IP do ESP32 aparece no Serial ao conectar no Wi-Fi e no card da balança no dashboard.
+
+Para usar um OLED no futuro: `#define USE_OLED 1` no `config.h`.
+
+> **Modo maquete:** `WEIGHT_SCALE_MULTIPLIER 1000.0` faz 450 g virar 450 kg — útil para demonstrar gráficos de GMD realistas junto com o seed. Com a célula de 5 kg, objetos de 200 g a 600 g dão "bois" de 200 a 600 kg. Para testar a precisão real, use `1.0`.
 
 > **Timestamp:** o ESP sincroniza via NTP. Se pesar antes do primeiro sync (sem internet), o campo `timestamp` é omitido e o servidor usa a hora de chegada.
 
@@ -129,6 +159,8 @@ No monitor Serial (115200):
 | **POST** | **`/weighings`** | **X-Device-Key** | ingestão do ESP32 |
 | GET | `/weighings?limit=&animal_id=` | JWT | pesagens recentes |
 | POST | `/telemetry` | X-Device-Key | `{device_id, readings:[{tipo_sensor, valor}]}` |
+| POST | `/live` | X-Device-Key | estado ao vivo da balança (não grava no banco) |
+| GET | `/live` | JWT | último estado de cada balança |
 | GET/POST | `/animals` | JWT | lista (com último peso e GMD) / cria |
 | GET/PATCH/DELETE | `/animals/:id` | JWT (DELETE admin) | detalhe com histórico e resumo |
 | POST | `/animals/:id/weighings` | JWT | pesagem manual |
@@ -139,7 +171,7 @@ No monitor Serial (115200):
 | GET/PUT | `/farm` | JWT (PUT admin) | dados da fazenda |
 | GET/POST/DELETE | `/users` | JWT (POST/DELETE admin) | perfis |
 
-**Eventos Socket.io** (sala da fazenda): `weighing:new`, `device:status`, `telemetry:new`.
+**Eventos Socket.io** (sala da fazenda): `weighing:new`, `device:status`, `telemetry:new`, `scale:live`.
 Dispositivos sem contato há 90 s são marcados offline automaticamente.
 
 ### Segurança
@@ -163,27 +195,9 @@ Tabelas e campos conforme a especificação (`farms`, `users`, `animals`, `devic
 
 ---
 
-## 5. Deploy (Vercel + Supabase)
+## 5. Próximos passos sugeridos
 
-1. Crie um projeto em [supabase.com](https://supabase.com) (região `South America (São Paulo)`), guarde a senha do banco.
-2. Em **Connect → ORMs → Prisma** copie as duas URLs:
-   - `DATABASE_URL` — pooler *transaction*, porta **6543**, com `?pgbouncer=true&connection_limit=1`
-   - `DIRECT_URL` — porta **5432** (usada só pelas migrations)
-3. Crie as tabelas e os dados demo a partir do seu PC (com as URLs do Supabase no `backend/.env`):
-   ```bash
-   cd backend
-   npx prisma migrate deploy
-   npm run db:seed
-   ```
-4. Na Vercel (**Settings → Environment Variables**): `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`.
-5. No firmware, `API_BASE_URL` passa a ser `https://SEU-PROJETO.vercel.app`.
-
-> Na Vercel não há Socket.io, MQTT nem marcação automática de offline (serverless). O ESP32 usa HTTP.
-
----
-
-## 6. Próximos passos sugeridos
-
+- Supabase: o schema Prisma funciona direto apontando `DATABASE_URL` para o Postgres do Supabase.
 - Firmware via MQTT (PubSubClient) usando os tópicos já suportados pelo backend.
 - Buffer offline persistente em LittleFS (hoje é em RAM).
 - OTA (ArduinoOTA) e provisionamento de Wi-Fi (WiFiManager).

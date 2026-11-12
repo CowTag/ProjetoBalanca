@@ -1,5 +1,5 @@
 // Ilustrações originais do tema fazenda (SVG puro, sem imagens externas).
-import { type CSSProperties, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 
 const box: CSSProperties = { transformBox: 'fill-box', transformOrigin: 'center' };
@@ -78,9 +78,16 @@ function Tuft({ x, y, delay = 0 }: { x: number; y: number; delay?: number }) {
 }
 
 /**
- * Paisagem de fazenda: céu, sol, nuvens, colinas, cerca e árvore.
+ * Paisagem de fazenda animada: céu, sol, nuvens, colinas, cerca e vacas pastando.
+ * Clique em uma vaca para ouvir um "Muu!".
  */
 export function Landscape({ className, children, compact }: { className?: string; children?: ReactNode; compact?: boolean }) {
+  const [moo, setMoo] = useState<number | null>(null);
+  const say = (i: number) => {
+    setMoo(i);
+    setTimeout(() => setMoo(null), 1200);
+  };
+
   return (
     <div className={clsx('relative overflow-hidden bg-gradient-to-b from-ceu-200 via-ceu-100 to-pasto-50', className)}>
       {/* sol */}
@@ -120,6 +127,29 @@ export function Landscape({ className, children, compact }: { className?: string
           <Tuft key={i} x={25 + i * 50} y={30} delay={(i % 5) * 0.4} />
         ))}
       </svg>
+
+      {/* vacas */}
+      {!compact &&
+        [
+          { left: '28%', w: 'w-24', delay: '0s', grazing: true },
+          { left: '58%', w: 'w-16', delay: '-7s', grazing: false, flip: true },
+        ].map((c, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => say(i)}
+            className="group absolute bottom-3 animate-graze focus:outline-none"
+            style={{ left: c.left, animationDelay: c.delay }}
+            aria-label="Vaca"
+          >
+            {moo === i && (
+              <span className="absolute -top-7 left-1/2 -translate-x-1/2 animate-pop whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-xs font-bold text-palha-700 shadow-soft">
+                Muu!
+              </span>
+            )}
+            <Cow className={clsx(c.w, 'transition-transform group-hover:-translate-y-1')} grazing={c.grazing} flip={c.flip} />
+          </button>
+        ))}
     </div>
   );
 }

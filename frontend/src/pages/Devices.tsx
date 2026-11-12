@@ -7,6 +7,7 @@ import { useRealtime } from '../lib/socket';
 import { useAuth } from '../hooks/useAuth';
 import { SENSOR_LABEL, num, relativo } from '../lib/format';
 import type { Device } from '../lib/types';
+import { LiveScale } from '../components/LiveScale';
 import { Badge, Button, Card, CardHeader, Empty, ErrorBox, Field, OnlineDot, Spinner } from '../components/ui';
 
 type TelemetryPoint = { tipo_sensor: string; valor: number; timestamp: string };
@@ -70,6 +71,8 @@ export default function Devices() {
           }}
         />
       )}
+
+      <LiveScale showLog={false} />
 
       <ErrorBox msg={list.error} />
       {!list.data ? (

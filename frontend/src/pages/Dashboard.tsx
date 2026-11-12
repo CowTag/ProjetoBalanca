@@ -9,6 +9,7 @@ import { dateTime, gmdFmt, kg, shortDay } from '../lib/format';
 import type { Overview, RankItem, Weighing } from '../lib/types';
 import { Badge, Card, CardHeader, Empty, ErrorBox, Kpi, Spinner } from '../components/ui';
 import { Landscape } from '../components/FarmArt';
+import { LiveScale } from '../components/LiveScale';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
@@ -76,6 +77,8 @@ export default function Dashboard() {
           />
         </div>
       )}
+
+      <LiveScale />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
