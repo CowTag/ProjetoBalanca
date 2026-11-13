@@ -3,7 +3,7 @@
 ```
 ┌────────────── ESP32 ──────────────┐        HTTP POST /api/v1/weighings        ┌──────────── Backend (Node/TS) ────────────┐
 │ MFRC522 ─┐                        │  ───────────────────────────────────────▶ │ Express + Zod + Prisma ──▶ PostgreSQL     │
-│ HX711  ──┼─ FreeRTOS (3 tasks) ───┤        POST /api/v1/telemetry             │ Ponte MQTT (opcional, cowtag/+/pesagem)   │
+│ HX711  ──┼─ FreeRTOS (3 tasks) ───┤        POST /api/v1/telemetry             │                                            │
 │ LED    ──┤  buffer offline + NTP  │  ◀── 201 {brinco, ganho_kg} / 404 / 409   │ Socket.io ──▶ eventos em tempo real       │
 │ Web local┘ (status no celular)    │                                           └───────────────────┬───────────────────────┘
 └───────────────────────────────────┘                                                               │ REST + WebSocket
@@ -15,7 +15,7 @@
 ```
 cowtag/
 ├── firmware/           PlatformIO (ESP32, Arduino + FreeRTOS)
-├── backend/            Node.js + TypeScript + Express + Prisma + Socket.io + MQTT
+├── backend/            Node.js + TypeScript + Express + Prisma + Socket.io
 ├── frontend/           React + Vite + Tailwind + Recharts
 ├── infra/              mosquitto.conf
 └── docker-compose.yml  PostgreSQL 16 + Mosquitto
@@ -24,8 +24,6 @@ cowtag/
 ---
 
 ## 1. Subindo o ambiente (≈5 min)
-
-Pré-requisitos: Node 20+, Docker, VS Code + extensão PlatformIO.
 
 ```bash
 # Banco + broker MQTT
@@ -45,7 +43,7 @@ npm install
 npm run dev                            # http://localhost:5173
 ```
 
-Login demo: **admin@cowtag.local / cowtag123** (ou operador@cowtag.local).
+Login demo: **admin@cowtag.local / cowtag123**
 
 ### Testando a API sem hardware
 
@@ -64,13 +62,6 @@ Simulando o painel "Balança ao vivo":
 curl -X POST http://localhost:3000/api/v1/live \
   -H "Content-Type: application/json" -H "X-Device-Key: dev-key-balanca-01" \
   -d '{"device_id":"BALANCA_ESP32_01","estado":"ESTABILIZANDO","peso_kg":0.448,"estavel":false,"tag":"43:A2:89:C1","mensagem":"aguardando"}'
-```
-
-Via MQTT (com `mosquitto_pub`):
-
-```bash
-mosquitto_pub -t cowtag/BALANCA_ESP32_01/pesagem -m '{"rfid_tag":"43:A2:89:C1","weight_kg":0.452}'
-mosquitto_sub -t 'cowtag/+/resposta'
 ```
 
 ---
@@ -94,7 +85,6 @@ mosquitto_sub -t 'cowtag/+/resposta'
 | **OLED SSD1306 I2C** *(opcional, `USE_OLED 1`)* | SDA / SCL | GPIO 21 / 22 |
 | **Célula 5 kg (barra) → HX711** | Vermelho E+, Preto E−, Branco A−, Verde A+ | — |
 
-> O MFRC522 **não** tolera 5 V. Bateria opcional: divisor 100k/100k em GPIO 34 e `PIN_BATTERY 34`.
 
 ### Montagem física (protótipo)
 
