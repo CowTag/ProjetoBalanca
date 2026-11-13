@@ -1,44 +1,28 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Beef, ChevronDown, Cpu, Gauge, LogOut, Menu, Tractor, X } from 'lucide-react';
+import { Beef, Building2, ChevronDown, Cpu, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { REALTIME_ENABLED, getSocket } from '../lib/socket';
-import { CowHead, Cow, FenceDivider } from './FarmArt';
+import { BrandMark } from './ui';
 
 const links = [
-  { to: '/', label: 'Painel', icon: Gauge, end: true },
+  { to: '/', label: 'Painel', icon: LayoutDashboard, end: true },
   { to: '/animais', label: 'Rebanho', icon: Beef },
   { to: '/dispositivos', label: 'Balanças', icon: Cpu },
-  { to: '/fazenda', label: 'Fazenda', icon: Tractor },
+  { to: '/fazenda', label: 'Fazenda', icon: Building2 },
 ];
 
-function Logo() {
-  const [moo, setMoo] = useState(false);
+function Brand() {
+  const { user } = useAuth();
   return (
-    <button
-      type="button"
-      onClick={() => {
-        setMoo(true);
-        setTimeout(() => setMoo(false), 1000);
-      }}
-      className="group relative flex items-center gap-2.5"
-      aria-label="CowTag"
-    >
-      <span className="grid h-10 w-10 place-items-center rounded-2xl bg-pasto-100 ring-1 ring-pasto-200 transition group-hover:bg-pasto-200">
-        <CowHead className={clsx('h-8 w-8', moo ? 'animate-wiggle' : 'group-hover:animate-wiggle')} />
-      </span>
-      {moo && (
-        <span className="absolute -bottom-7 left-2 animate-pop rounded-full bg-white px-2 py-0.5 text-xs font-bold text-palha-700 shadow-soft">
-          Muu!
-        </span>
-      )}
-      <span className="text-left leading-tight">
-        <span className="block text-lg font-extrabold text-palha-900">
-          Cow<span className="text-pasto-500">Tag</span>
-        </span>
-      </span>
-    </button>
+    <div className="flex min-w-0 items-center gap-3">
+      <BrandMark className="h-9" />
+      <div className="hidden min-w-0 leading-tight sm:block">
+        <div className="text-sm font-semibold text-white">CowTag</div>
+        <div className="truncate text-xs text-palha-400">{user?.fazenda.nome}</div>
+      </div>
+    </div>
   );
 }
 
@@ -59,24 +43,23 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-full border border-palha-200 bg-white py-1 pl-1 pr-2.5 transition hover:border-pasto-300"
+        className="flex items-center gap-2 rounded-md py-1 pl-1 pr-2 transition-colors hover:bg-white/10"
+        aria-label="Menu do usuário"
       >
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-pasto-300 to-pasto-500 text-xs font-extrabold text-white">
-          {initials}
-        </span>
-        <ChevronDown size={14} className={clsx('text-palha-500 transition', open && 'rotate-180')} />
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-palha-700 text-xs font-semibold text-palha-100">{initials}</span>
+        <ChevronDown size={14} className={clsx('text-palha-400 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-60 animate-fade-up overflow-hidden rounded-2xl border border-palha-200 bg-white shadow-lift">
-          <div className="bg-pasto-50 px-4 py-3">
-            <div className="font-bold text-palha-900">{user?.nome}</div>
-            <div className="text-xs text-palha-500">{user?.email}</div>
-            <div className="mt-1 text-xs font-semibold capitalize text-pasto-600">
-              {user?.funcao} · {user?.fazenda.nome}
+        <div className="absolute right-0 mt-2 w-64 animate-fade-up overflow-hidden rounded-md border border-palha-200 bg-white shadow-lift">
+          <div className="border-b border-palha-100 px-4 py-3">
+            <div className="truncate text-sm font-medium text-palha-900">{user?.nome}</div>
+            <div className="truncate text-xs text-palha-500">{user?.email}</div>
+            <div className="mt-1 truncate text-xs text-palha-500">
+              {user?.funcao === 'admin' ? 'Administrador' : 'Operador'} · {user?.fazenda.nome}
             </div>
           </div>
-          <button onClick={logout} className="flex w-full items-center gap-2 px-4 py-3 text-sm text-palha-600 hover:bg-palha-50">
-            <LogOut size={16} /> Sair
+          <button onClick={logout} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-palha-700 hover:bg-palha-50">
+            <LogOut size={15} /> Sair
           </button>
         </div>
       )}
@@ -106,49 +89,14 @@ export function Layout() {
     };
   }, []);
 
-  const pill = ({ isActive }: { isActive: boolean }) =>
-    clsx(
-      'group relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition',
-      isActive ? 'bg-pasto-100 text-pasto-700 shadow-inner' : 'text-palha-600 hover:bg-pasto-50 hover:text-pasto-700',
-    );
-
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-palha-200/70 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
-          <Logo />
+      <header className="sticky top-0 z-30 bg-palha-900">
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6 lg:px-8">
+          <Brand />
 
-          {/* Menu superior (desktop) */}
-          <nav className="hidden items-center gap-1 rounded-full border border-palha-200/70 bg-palha-50/80 p-1 md:flex">
-            {links.map(({ to, label, icon: Icon, end }) => (
-              <NavLink key={to} to={to} end={end} className={pill}>
-                <Icon size={17} className="transition group-hover:-translate-y-0.5" />
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <span
-              className={clsx(
-                'hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold sm:flex',
-                live ? 'bg-pasto-50 text-pasto-700' : 'bg-palha-100 text-palha-500',
-              )}
-              title={live ? 'Recebendo pesagens em tempo real' : 'Sem conexão em tempo real'}
-            >
-              <span className={clsx('h-2 w-2 rounded-full', live ? 'animate-pulse bg-pasto-500' : 'bg-palha-300')} />
-              {live ? 'Ao vivo' : 'Offline'}
-            </span>
-            <UserMenu />
-            <button className="rounded-xl p-2 text-palha-600 hover:bg-pasto-50 md:hidden" onClick={() => setOpen((o) => !o)} aria-label="Menu">
-              {open ? <X /> : <Menu />}
-            </button>
-          </div>
-        </div>
-
-        {/* Menu mobile (abre abaixo do topo) */}
-        {open && (
-          <nav className="grid animate-fade-up grid-cols-2 gap-2 border-t border-palha-100 bg-white/95 p-3 md:hidden">
+          {/* Menu central (desktop) */}
+          <nav className="hidden items-center gap-1 md:flex">
             {links.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
@@ -156,27 +104,58 @@ export function Layout() {
                 end={end}
                 className={({ isActive }) =>
                   clsx(
-                    'flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold',
-                    isActive ? 'bg-pasto-100 text-pasto-700' : 'bg-palha-50 text-palha-600',
+                    'flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors',
+                    isActive ? 'bg-white/10 text-white' : 'text-palha-400 hover:bg-white/5 hover:text-palha-100',
                   )
                 }
               >
-                <Icon size={18} /> {label}
+                <Icon size={16} strokeWidth={1.75} />
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="md:hidden" />
+
+          <div className="flex items-center justify-end gap-3">
+            <span
+              className="hidden items-center gap-2 text-xs font-medium text-palha-400 lg:inline-flex"
+              title={live ? 'Recebendo pesagens em tempo real' : 'Sem conexão em tempo real'}
+            >
+              <span className={clsx('h-1.5 w-1.5 rounded-full', live ? 'bg-pasto-400' : 'bg-palha-500')} />
+              {live ? 'Tempo real' : 'Desconectado'}
+            </span>
+            <UserMenu />
+            <button className="rounded-md p-2 text-palha-300 hover:bg-white/10 md:hidden" onClick={() => setOpen((o) => !o)} aria-label="Menu">
+              {open ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Menu (celular) */}
+        {open && (
+          <nav className="grid animate-fade-up grid-cols-2 gap-1 border-t border-white/10 p-3 md:hidden">
+            {links.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium',
+                    isActive ? 'bg-white/10 text-white' : 'text-palha-400 hover:bg-white/5',
+                  )
+                }
+              >
+                <Icon size={16} strokeWidth={1.75} /> {label}
               </NavLink>
             ))}
           </nav>
         )}
-        <FenceDivider className="opacity-70" />
       </header>
 
-      <main key={location.pathname} className="mx-auto w-full max-w-7xl flex-1 animate-fade-up p-4 lg:p-6">
+      <main key={location.pathname} className="mx-auto w-full max-w-7xl flex-1 animate-fade-up p-4 sm:p-6 lg:p-8">
         <Outlet />
       </main>
-
-      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 pb-6 pt-2 text-xs text-palha-400">
-        <span>CowTag · gestão pecuária inteligente</span>
-        <Cow className="w-10 opacity-60" grazing />
-      </footer>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { normalizeTag, round3 } from '../lib/livestock';
 import { emitToFarm } from '../realtime';
 
 // ------------------------------------------------------------------
-// Schemas das payloads vindas do ESP32 (HTTP ou MQTT)
+// Schemas das payloads vindas do ESP32 (HTTP)
 // ------------------------------------------------------------------
 export const weighingSchema = z.object({
   device_id: z.string().min(1),

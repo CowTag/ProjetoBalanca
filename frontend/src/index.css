@@ -3,39 +3,33 @@
 @tailwind utilities;
 
 @layer base {
-  /* Fundo creme com textura sutil de pasto */
-  .pasture-bg {
-    background-color: #fbfaf5;
-    background-image:
-      radial-gradient(circle at 20% 0%, rgba(169, 212, 151, 0.18), transparent 45%),
-      radial-gradient(circle at 90% 10%, rgba(207, 231, 240, 0.35), transparent 40%),
-      radial-gradient(rgba(104, 166, 83, 0.07) 1px, transparent 1px);
-    background-size: auto, auto, 22px 22px;
-    background-attachment: fixed;
+  .app-bg {
+    background-color: #f6f7f9;
+    font-feature-settings: 'cv11', 'ss01';
   }
-  ::selection { background: #cbe6bf; }
+  ::selection { background: #d5eadc; }
 }
 
 @layer components {
   .input {
-    @apply w-full rounded-xl border border-palha-200 bg-white/90 px-3 py-2 text-sm outline-none transition
-      placeholder:text-palha-400 focus:border-pasto-400 focus:ring-4 focus:ring-pasto-100;
+    @apply w-full rounded-md border border-palha-300 bg-white px-3 py-2 text-sm text-palha-900 outline-none transition-colors
+      placeholder:text-palha-400 focus:border-pasto-500 focus:ring-2 focus:ring-pasto-500/15 disabled:bg-palha-50 disabled:text-palha-500;
   }
   .label {
-    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-palha-500;
+    @apply mb-1.5 block text-xs font-medium text-palha-600;
   }
   .th {
-    @apply px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide text-palha-500;
+    @apply border-b border-palha-200 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-palha-500;
   }
   .td {
-    @apply whitespace-nowrap px-3 py-2.5 text-sm;
+    @apply whitespace-nowrap px-4 py-2.5 text-sm tabular-nums;
   }
   .row-hover {
-    @apply transition-colors hover:bg-pasto-50/70;
+    @apply transition-colors hover:bg-palha-50;
   }
 }
 
-@keyframes flash { from { background: #e4f2dd; } to { background: transparent; } }
+@keyframes flash { from { background: #eef6f1; } to { background: transparent; } }
 .flash { animation: flash 2.5s ease-out; }
 
 @media (prefers-reduced-motion: reduce) {

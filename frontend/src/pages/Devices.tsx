@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { SENSOR_LABEL, num, relativo } from '../lib/format';
 import type { Device } from '../lib/types';
 import { LiveScale } from '../components/LiveScale';
-import { Badge, Button, Card, CardHeader, Empty, ErrorBox, Field, OnlineDot, Spinner } from '../components/ui';
+import { Badge, Button, Card, CardHeader, Empty, ErrorBox, Field, OnlineDot, PageTitle, Spinner } from '../components/ui';
 
 type TelemetryPoint = { tipo_sensor: string; valor: number; timestamp: string };
 
@@ -38,20 +38,20 @@ export default function Devices() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold text-palha-900">Dispositivos</h1>
-          <p className="text-sm text-palha-500">Balanças ESP32 e sensores</p>
-        </div>
-        {isAdmin && (
-          <Button onClick={() => setShowForm((s) => !s)}>
-            <Plus size={16} /> Nova balança
-          </Button>
-        )}
-      </div>
+      <PageTitle
+        title="Balanças e dispositivos"
+        subtitle="Equipamentos ESP32, sensores e telemetria"
+        action={
+          isAdmin && (
+            <Button onClick={() => setShowForm((s) => !s)}>
+              <Plus size={16} /> Nova balança
+            </Button>
+          )
+        }
+      />
 
       {newKey && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
           <div className="font-semibold text-amber-900">Chave do dispositivo “{newKey.nome}” (exibida só agora)</div>
           <code className="mt-2 block break-all rounded bg-white px-3 py-2 font-mono">{newKey.key}</code>
           <p className="mt-2 text-amber-800">
@@ -85,17 +85,17 @@ export default function Devices() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {list.data.map((d) => (
-            <Card interactive key={d.id} className={selected === d.id ? 'ring-2 ring-pasto-400' : ''}>
+            <Card interactive key={d.id} className={selected === d.id ? 'border-pasto-500 ring-1 ring-pasto-500' : ''}>
               <div className="flex items-start justify-between p-4">
                 <div>
-                  <div className="flex items-center gap-2 font-semibold">
+                  <div className="flex items-center gap-2 text-sm font-medium text-palha-900">
                     <OnlineDot online={d.status_online} /> {d.nome}
                   </div>
                   <div className="font-mono text-xs text-palha-500">{d.identificador_esp32}</div>
                 </div>
                 <Badge tone={d.status_online ? 'green' : 'gray'}>{d.status_online ? 'Online' : 'Offline'}</Badge>
               </div>
-              <div className="grid grid-cols-2 gap-px bg-palha-100 text-sm">
+              <div className="grid grid-cols-2 gap-px border-y border-palha-100 bg-palha-100 text-sm">
                 <Stat label="Último contato" value={relativo(d.ultimo_contato)} />
                 <Stat label="Pesagens hoje" value={num(d.pesagens_hoje)} />
                 {Object.entries(d.telemetria)
@@ -129,7 +129,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-white px-4 py-2">
       <div className="text-xs text-palha-500">{label}</div>
-      <div className="font-medium">{value}</div>
+      <div className="font-medium tabular-nums text-palha-900">{value}</div>
     </div>
   );
 }
@@ -160,21 +160,21 @@ function TelemetryChart({ deviceId, name }: { deviceId: string; name: string }) 
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ebe5d4" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#eceff2" vertical={false} />
               <XAxis
                 dataKey="t"
                 type="number"
                 scale="time"
                 domain={['dataMin', 'dataMax']}
                 tickFormatter={(t) => new Date(Number(t)).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                fontSize={12}
+                fontSize={11} stroke="#959eaa" tickLine={false} axisLine={false}
               />
-              <YAxis domain={['auto', 'auto']} fontSize={12} width={60} />
+              <YAxis domain={['auto', 'auto']} fontSize={11} stroke="#959eaa" tickLine={false} axisLine={false} width={60} />
               <Tooltip
                 labelFormatter={(t) => new Date(Number(t)).toLocaleString('pt-BR')}
                 formatter={(v) => [`${num(Number(v), meta?.casas ?? 2)} ${meta?.unidade ?? ''}`, meta?.nome ?? tipo]}
               />
-              <Line dataKey="v" stroke="#c0935f" strokeWidth={2} dot={false} />
+              <Line dataKey="v" stroke="#1f6643" strokeWidth={1.75} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         )}

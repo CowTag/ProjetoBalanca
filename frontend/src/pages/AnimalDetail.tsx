@@ -7,7 +7,6 @@ import { useAsync } from '../lib/useAsync';
 import { usePolling, useRealtime } from '../lib/socket';
 import { dateOnly, dateTime, gmdFmt, idadeMeses, kg } from '../lib/format';
 import type { AnimalDetail as AD, Weighing } from '../lib/types';
-import { CowHead } from '../components/FarmArt';
 import { AnimalActions, StatusInfo } from '../components/AnimalManage';
 import { Button, Card, CardHeader, Empty, ErrorBox, Field, Kpi, Spinner, StatusBadge } from '../components/ui';
 
@@ -46,13 +45,10 @@ export default function AnimalDetail() {
         <ArrowLeft size={16} /> Rebanho
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-palha-200 pb-4">
         <div>
           <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-pasto-100 ring-1 ring-pasto-200">
-              <CowHead className="h-9 w-9" />
-            </span>
-            <h1 className="text-2xl font-extrabold text-palha-900">{d.brinco_visual}</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-palha-900">{d.brinco_visual}</h1>
             <StatusBadge status={d.status} />
           </div>
           <p className="text-sm text-palha-500">
@@ -65,11 +61,11 @@ export default function AnimalDetail() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi delay={0} label="Peso atual" value={d.resumo.peso_atual_kg} format={(n) => kg(n)} />
-        <Kpi delay={60} label="Peso inicial" value={d.resumo.peso_inicial_kg} format={(n) => kg(n)} />
-        <Kpi delay={120} label="Ganho total" value={d.resumo.ganho_total_kg} format={(n) => kg(n)} />
-        <Kpi delay={180} label="GMD total" value={d.resumo.gmd_kg_dia} format={gmdFmt} />
-        <Kpi delay={240} label="GMD 30 dias" value={d.resumo.gmd_30d_kg_dia} format={gmdFmt} />
+        <Kpi label="Peso atual" value={d.resumo.peso_atual_kg} format={(n) => kg(n)} />
+        <Kpi label="Peso inicial" value={d.resumo.peso_inicial_kg} format={(n) => kg(n)} />
+        <Kpi label="Ganho total" value={d.resumo.ganho_total_kg} format={(n) => kg(n)} />
+        <Kpi label="GMD total" value={d.resumo.gmd_kg_dia} format={gmdFmt} />
+        <Kpi label="GMD 30 dias" value={d.resumo.gmd_30d_kg_dia} format={gmdFmt} />
       </div>
 
       <Card>
@@ -82,22 +78,22 @@ export default function AnimalDetail() {
               <AreaChart data={chart}>
                 <defs>
                   <linearGradient id="gPeso" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#86bf70" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#86bf70" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="#2a7d53" stopOpacity={0.16} />
+                    <stop offset="100%" stopColor="#2a7d53" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ebe5d4" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#eceff2" vertical={false} />
                 <XAxis
                   dataKey="t"
                   type="number"
                   scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(t) => new Date(Number(t)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                  fontSize={12}
+                  fontSize={11} stroke="#959eaa" tickLine={false} axisLine={false}
                 />
-                <YAxis domain={['auto', 'auto']} fontSize={12} unit=" kg" width={70} />
+                <YAxis domain={['auto', 'auto']} fontSize={11} stroke="#959eaa" tickLine={false} axisLine={false} unit=" kg" width={70} />
                 <Tooltip labelFormatter={(t) => dateTime(new Date(Number(t)).toISOString())} formatter={(v) => [kg(Number(v), 3), 'Peso']} />
-                <Area type="monotone" dataKey="peso" stroke="#518a40" strokeWidth={2.5} fill="url(#gPeso)" dot={{ r: 3, fill: '#fff', strokeWidth: 2 }} activeDot={{ r: 6 }} animationDuration={900} />
+                <Area type="monotone" dataKey="peso" stroke="#1f6643" strokeWidth={1.75} fill="url(#gPeso)" dot={{ r: 2.5, fill: '#fff', strokeWidth: 1.5 }} activeDot={{ r: 4 }} isAnimationActive={false} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -109,7 +105,7 @@ export default function AnimalDetail() {
           <CardHeader title="Histórico" />
           <div className="max-h-96 overflow-y-auto">
             <table className="w-full">
-              <thead className="sticky top-0 bg-pasto-50">
+              <thead className="sticky top-0 bg-palha-50">
                 <tr>
                   <th className="th">Data</th>
                   <th className="th">Origem</th>

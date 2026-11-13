@@ -3,7 +3,7 @@
 ```
 ┌────────────── ESP32 ──────────────┐        HTTP POST /api/v1/weighings        ┌──────────── Backend (Node/TS) ────────────┐
 │ MFRC522 ─┐                        │  ───────────────────────────────────────▶ │ Express + Zod + Prisma ──▶ PostgreSQL     │
-│ HX711  ──┼─ FreeRTOS (3 tasks) ───┤        POST /api/v1/telemetry             │ Ponte MQTT (opcional, cowtag/+/pesagem)   │
+│ HX711  ──┼─ FreeRTOS (3 tasks) ───┤        POST /api/v1/telemetry             │ Autenticação por X-Device-Key (SHA-256)   │
 │ LED    ──┤  buffer offline + NTP  │  ◀── 201 {brinco, ganho_kg} / 404 / 409   │ Socket.io ──▶ eventos em tempo real       │
 │ Web local┘ (status no celular)    │                                           └───────────────────┬───────────────────────┘
 └───────────────────────────────────┘                                                               │ REST + WebSocket
@@ -15,10 +15,9 @@
 ```
 cowtag/
 ├── firmware/           PlatformIO (ESP32, Arduino + FreeRTOS)
-├── backend/            Node.js + TypeScript + Express + Prisma + Socket.io + MQTT
+├── backend/            Node.js + TypeScript + Express + Prisma + Socket.io
 ├── frontend/           React + Vite + Tailwind + Recharts
-├── infra/              mosquitto.conf
-└── docker-compose.yml  PostgreSQL 16 + Mosquitto
+└── docker-compose.yml  PostgreSQL 16 (desenvolvimento local)
 ```
 
 ---
@@ -28,7 +27,7 @@ cowtag/
 Pré-requisitos: Node 20+, Docker, VS Code + extensão PlatformIO.
 
 ```bash
-# Banco + broker MQTT
+# Banco de dados
 docker compose up -d
 
 # Backend
@@ -64,13 +63,6 @@ Simulando o painel "Balança ao vivo":
 curl -X POST http://localhost:3000/api/v1/live \
   -H "Content-Type: application/json" -H "X-Device-Key: dev-key-balanca-01" \
   -d '{"device_id":"BALANCA_ESP32_01","estado":"ESTABILIZANDO","peso_kg":0.448,"estavel":false,"tag":"43:A2:89:C1","mensagem":"aguardando"}'
-```
-
-Via MQTT (com `mosquitto_pub`):
-
-```bash
-mosquitto_pub -t cowtag/BALANCA_ESP32_01/pesagem -m '{"rfid_tag":"43:A2:89:C1","weight_kg":0.452}'
-mosquitto_sub -t 'cowtag/+/resposta'
 ```
 
 ---
@@ -178,7 +170,7 @@ Dispositivos sem contato há 90 s são marcados offline automaticamente.
 
 - Chave do dispositivo guardada só como hash SHA-256; comparação em tempo constante.
 - Usuários com bcrypt + JWT (12 h); dados sempre filtrados por `fazenda_id` (multi-fazenda).
-- Produção: HTTPS (troque `HTTPClient` por `WiFiClientSecure` com o certificado raiz), Mosquitto com usuário/senha/ACL, `JWT_SECRET` forte.
+- Produção: HTTPS (troque `HTTPClient` por `WiFiClientSecure` com o certificado raiz), `JWT_SECRET` forte.
 
 ---
 
@@ -215,13 +207,12 @@ Com o deploy, a balança envia para `https://SEU-PROJETO.vercel.app` de qualquer
 5. Teste: `https://SEU-PROJETO.vercel.app/health` deve responder `{"ok":true}`.
 6. No firmware, `API_BASE_URL = "https://SEU-PROJETO.vercel.app"` (sem barra no final) e grave no ESP32. No Serial deve aparecer `[NET] POST /weighings ... -> 201`.
 
-**Diferenças em relação ao modo local:** na Vercel (serverless) não há Socket.io, MQTT nem timers. O backend detecta `VERCEL=1` e o frontend é compilado com o tempo real desligado. As telas se atualizam por polling (balança ao vivo a cada 2 s, painel a cada 15 s), e o status online é calculado pelo `ultimo_contato` (offline após 90 s sem contato). O ESP32 usa HTTPS com a conexão reaproveitada, sem validar o certificado (`setInsecure`, suficiente para protótipo).
+**Diferenças em relação ao modo local:** na Vercel (serverless) não há Socket.io nem timers. O backend detecta `VERCEL=1` e o frontend é compilado com o tempo real desligado. As telas se atualizam por polling (balança ao vivo a cada 2 s, painel a cada 15 s), e o status online é calculado pelo `ultimo_contato` (offline após 90 s sem contato). O ESP32 usa HTTPS com a conexão reaproveitada, sem validar o certificado (`setInsecure`, suficiente para protótipo).
 
 ---
 
 ## 6. Próximos passos 
 
-- Firmware via MQTT (PubSubClient) usando os tópicos já suportados pelo backend.
 - Buffer offline persistente em LittleFS (hoje é em RAM).
 - OTA (ArduinoOTA) e provisionamento de Wi-Fi (WiFiManager).
 - Exportar relatórios CSV/PDF e alertas de GMD baixo.

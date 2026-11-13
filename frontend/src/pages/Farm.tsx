@@ -4,7 +4,7 @@ import { useAsync } from '../lib/useAsync';
 import { useAuth } from '../hooks/useAuth';
 import { dateOnly } from '../lib/format';
 import type { Farm, Funcao, User } from '../lib/types';
-import { Badge, Button, Card, CardHeader, ErrorBox, Field } from '../components/ui';
+import { Badge, Button, Card, CardHeader, ErrorBox, Field, PageTitle } from '../components/ui';
 
 export default function FarmPage() {
   const { user, refresh } = useAuth();
@@ -30,14 +30,14 @@ export default function FarmPage() {
       method: 'PUT',
       json: { nome: f.nome, localizacao: f.localizacao || null, area_hectares: f.area_hectares ? Number(f.area_hectares) : null },
     });
-    setMsg('Salvo!');
+    setMsg('Alterações salvas.');
     refresh();
     setTimeout(() => setMsg(null), 2000);
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-extrabold text-palha-900">Fazenda</h1>
+      <PageTitle title="Fazenda" subtitle="Dados da propriedade e controle de acesso" />
 
       <Card>
         <CardHeader title="Dados da propriedade" subtitle={farm.data ? `Cadastrada em ${dateOnly(farm.data.criado_em)}` : ''} />
@@ -63,7 +63,7 @@ export default function FarmPage() {
       <Card>
         <CardHeader title="Usuários e perfis" />
         <table className="w-full">
-          <thead className="bg-pasto-50/60">
+          <thead className="bg-palha-50">
             <tr>
               <th className="th">Nome</th>
               <th className="th">E-mail</th>
@@ -77,7 +77,7 @@ export default function FarmPage() {
                 <td className="td font-medium">{u.nome}</td>
                 <td className="td">{u.email}</td>
                 <td className="td">
-                  <Badge tone={u.funcao === 'admin' ? 'amber' : 'gray'}>{u.funcao}</Badge>
+                  <Badge tone={u.funcao === 'admin' ? 'blue' : 'gray'}>{u.funcao === 'admin' ? 'Administrador' : 'Operador'}</Badge>
                 </td>
                 {isAdmin && (
                   <td className="td text-right">
@@ -129,7 +129,7 @@ function NewUserForm({ onDone }: { onDone: () => void }) {
       <input className="input" type="password" placeholder="Senha" value={f.senha} onChange={(e) => setF({ ...f, senha: e.target.value })} required />
       <select className="input" value={f.funcao} onChange={(e) => setF({ ...f, funcao: e.target.value as Funcao })}>
         <option value="operador">Operador</option>
-        <option value="admin">Admin</option>
+        <option value="admin">Administrador</option>
       </select>
       <Button>Adicionar</Button>
       <div className="sm:col-span-5">

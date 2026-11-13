@@ -1,15 +1,15 @@
-// Componentes base no estilo shadcn/ui (Tailwind puro), tema "pasto claro".
+// Componentes base no estilo shadcn/ui (Tailwind puro), tema corporativo sóbrio.
 import clsx from 'clsx';
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
-import { SleepingCow } from './FarmArt';
+import { Inbox } from 'lucide-react';
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 
 export function Card({ className, children, interactive, style }: { className?: string; children: ReactNode; interactive?: boolean; style?: CSSProperties }) {
   return (
     <div
       style={style}
       className={clsx(
-        'rounded-2xl border border-palha-200/80 bg-white/90 shadow-soft backdrop-blur-sm',
-        interactive && 'transition duration-200 hover:-translate-y-0.5 hover:border-pasto-200 hover:shadow-lift',
+        'rounded-lg border border-palha-200 bg-white shadow-soft',
+        interactive && 'transition-colors hover:border-palha-300',
         className,
       )}
     >
@@ -20,11 +20,11 @@ export function Card({ className, children, interactive, style }: { className?: 
 
 export function CardHeader({ title, subtitle, action, icon }: { title: ReactNode; subtitle?: ReactNode; action?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-palha-100 px-4 py-3">
+    <div className="flex items-start justify-between gap-3 border-b border-palha-200 px-4 py-3">
       <div className="flex items-center gap-2.5">
-        {icon && <span className="grid h-8 w-8 place-items-center rounded-lg bg-pasto-50 text-pasto-600">{icon}</span>}
+        {icon && <span className="text-palha-400">{icon}</span>}
         <div>
-          <h3 className="font-bold text-palha-900">{title}</h3>
+          <h3 className="text-sm font-semibold text-palha-900">{title}</h3>
           {subtitle && <p className="text-xs text-palha-500">{subtitle}</p>}
         </div>
       </div>
@@ -39,11 +39,11 @@ export function Button({ variant = 'primary', className, ...p }: ButtonHTMLAttri
     <button
       {...p}
       className={clsx(
-        'inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition active:scale-[.97] disabled:opacity-50',
-        variant === 'primary' && 'bg-pasto-500 text-white shadow-sm hover:bg-pasto-600',
-        variant === 'outline' && 'border border-palha-200 bg-white text-palha-700 hover:border-pasto-300 hover:bg-pasto-50',
-        variant === 'ghost' && 'text-palha-600 hover:bg-pasto-50',
-        variant === 'danger' && 'bg-red-500 text-white hover:bg-red-600',
+        'inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pasto-500/30 disabled:opacity-50',
+        variant === 'primary' && 'bg-pasto-600 text-white hover:bg-pasto-700',
+        variant === 'outline' && 'border border-palha-300 bg-white text-palha-700 hover:bg-palha-50',
+        variant === 'ghost' && 'text-palha-600 hover:bg-palha-100',
+        variant === 'danger' && 'bg-red-600 text-white hover:bg-red-700',
         className,
       )}
     />
@@ -55,12 +55,12 @@ export function Badge({ tone = 'gray', children }: { tone?: Tone; children: Reac
   return (
     <span
       className={clsx(
-        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold',
-        tone === 'green' && 'bg-pasto-100 text-pasto-700',
-        tone === 'gray' && 'bg-palha-100 text-palha-600',
-        tone === 'red' && 'bg-red-50 text-red-600',
-        tone === 'amber' && 'bg-terra-300/40 text-terra-600',
-        tone === 'blue' && 'bg-ceu-200 text-sky-800',
+        'inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+        tone === 'green' && 'bg-pasto-50 text-pasto-700 ring-pasto-200',
+        tone === 'gray' && 'bg-palha-50 text-palha-600 ring-palha-200',
+        tone === 'red' && 'bg-red-50 text-red-700 ring-red-200',
+        tone === 'amber' && 'bg-amber-50 text-amber-800 ring-amber-200',
+        tone === 'blue' && 'bg-ceu-100 text-slate-700 ring-ceu-200',
       )}
     >
       {children}
@@ -75,34 +75,7 @@ export function StatusBadge({ status }: { status: 'ativo' | 'vendido' | 'obito' 
 }
 
 export function OnlineDot({ online }: { online: boolean }) {
-  return (
-    <span className="relative inline-flex h-2.5 w-2.5">
-      {online && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pasto-400 opacity-60" />}
-      <span className={clsx('relative inline-flex h-2.5 w-2.5 rounded-full', online ? 'bg-pasto-500' : 'bg-palha-300')} />
-    </span>
-  );
-}
-
-/** Anima um número de 0 até o valor (ease-out). */
-export function useCountUp(target: number | null | undefined, ms = 900) {
-  const [v, setV] = useState(0);
-  const from = useRef(0);
-  useEffect(() => {
-    if (target == null) return;
-    const start = performance.now();
-    const ini = from.current;
-    let raf = 0;
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / ms);
-      const e = 1 - Math.pow(1 - p, 3);
-      setV(ini + (target - ini) * e);
-      if (p < 1) raf = requestAnimationFrame(tick);
-      else from.current = target;
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, ms]);
-  return target == null ? null : v;
+  return <span className={clsx('inline-flex h-2 w-2 rounded-full', online ? 'bg-pasto-500' : 'bg-palha-300')} />;
 }
 
 export function Kpi({
@@ -112,7 +85,6 @@ export function Kpi({
   display,
   hint,
   icon,
-  delay = 0,
 }: {
   label: string;
   value?: number | null;
@@ -122,21 +94,14 @@ export function Kpi({
   icon?: ReactNode;
   delay?: number;
 }) {
-  const n = useCountUp(value);
   return (
-    <Card interactive className="group animate-fade-up p-4" style={{ animationDelay: `${delay}ms` }}>
-      <div>
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wide text-palha-500">{label}</span>
-          {icon && (
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-pasto-50 text-pasto-600 transition group-hover:rotate-6 group-hover:scale-110 group-hover:bg-pasto-100">
-              {icon}
-            </span>
-          )}
-        </div>
-        <div className="mt-2 text-2xl font-extrabold tabular-nums text-palha-900">{display ?? (n == null ? '—' : format(n))}</div>
-        {hint && <div className="mt-1 text-xs text-palha-500">{hint}</div>}
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-palha-500">{label}</span>
+        {icon && <span className="text-palha-400">{icon}</span>}
       </div>
+      <div className="mt-2 text-2xl font-semibold tracking-tight tabular-nums text-palha-900">{display ?? (value == null ? '—' : format(value))}</div>
+      {hint && <div className="mt-1 text-xs text-palha-500">{hint}</div>}
     </Card>
   );
 }
@@ -152,8 +117,8 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function Empty({ children }: { children: ReactNode }) {
   return (
-    <div className="px-4 py-8 text-center text-sm text-palha-500">
-      <SleepingCow className="mb-3" />
+    <div className="flex flex-col items-center px-4 py-10 text-center text-sm text-palha-500">
+      <Inbox size={22} strokeWidth={1.5} className="mb-2 text-palha-300" />
       {children}
     </div>
   );
@@ -161,22 +126,48 @@ export function Empty({ children }: { children: ReactNode }) {
 
 export function ErrorBox({ msg }: { msg: string | null }) {
   if (!msg) return null;
-  return <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</div>;
+  return <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{msg}</div>;
 }
 
 export function Spinner() {
-  return <div className="h-6 w-6 animate-spin rounded-full border-[3px] border-pasto-400 border-t-transparent" />;
+  return <div className="h-5 w-5 animate-spin rounded-full border-2 border-palha-300 border-t-pasto-600" />;
 }
 
 /** Título de página padronizado. */
-export function PageTitle({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
+export function PageTitle({ title, subtitle, action }: { title: ReactNode; subtitle?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-palha-200 pb-4">
       <div>
-        <h1 className="text-2xl font-extrabold text-palha-900">{title}</h1>
-        {subtitle && <p className="text-sm text-palha-500">{subtitle}</p>}
+        <h1 className="text-xl font-semibold tracking-tight text-palha-900">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-sm text-palha-500">{subtitle}</p>}
       </div>
       {action}
     </div>
   );
+}
+
+/** Controle segmentado (filtros). */
+export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
+  return (
+    <div className="inline-flex rounded-md border border-palha-300 bg-white p-0.5">
+      {options.map(([v, l]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          className={clsx(
+            'rounded px-3 py-1.5 text-sm font-medium transition-colors',
+            value === v ? 'bg-palha-800 text-white' : 'text-palha-600 hover:bg-palha-100',
+          )}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Logo do produto (brinco CowTag). Altura controlada por `className` (padrão h-9). */
+export function BrandMark({ className }: { className?: string }) {
+  return <img src="/logo.png" alt="CowTag" draggable={false} className={clsx('h-9 w-auto shrink-0 select-none', className)} />;
 }

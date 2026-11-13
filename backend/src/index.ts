@@ -7,7 +7,6 @@ import { prisma } from './lib/prisma';
 import { errorHandler } from './lib/http';
 import { requireUser } from './middleware/auth';
 import { initRealtime, emitToFarm } from './realtime';
-import { startMqttBridge } from './mqtt';
 import { authRouter } from './routes/auth';
 import { animalsRouter } from './routes/animals';
 import { devicesRouter, telemetryIngestRouter } from './routes/devices';
@@ -44,13 +43,12 @@ app.use('/api/v1', requireUser, farmRouter);          // /farm, /users
 
 app.use(errorHandler);
 
-// Na Vercel (serverless) não há processo contínuo: sem WebSocket, MQTT nem timers.
+// Na Vercel (serverless) não há processo contínuo: sem WebSocket nem timers.
 // O app é exportado e a Vercel cuida de cada requisição. O status online/offline é
 // calculado na leitura (lib/online.ts) e o dashboard faz polling.
 if (!process.env.VERCEL) {
   const server = http.createServer(app);
   initRealtime(server);
-  startMqttBridge();
 
   // Marca como offline dispositivos sem contato recente (avisa o dashboard via socket)
   setInterval(async () => {

@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { AlertTriangle, ArrowLeftRight, HeartCrack, HandCoins, Pencil, Trash2, Trees } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, CircleCheck, CircleX, HandCoins, Pencil, Trash2 } from 'lucide-react';
 import { api, ApiError } from '../lib/api';
 import { dateOnly } from '../lib/format';
 import type { Animal, StatusAnimal } from '../lib/types';
@@ -101,9 +101,9 @@ export function AnimalForm({
 // Situação (ativo / vendido / óbito)
 // ---------------------------------------------------------------------
 const SITUACOES: { value: StatusAnimal; label: string; desc: string; icon: ReactNode; tone: string; obs: string }[] = [
-  { value: 'ativo', label: 'No pasto', desc: 'Animal ativo no rebanho', icon: <Trees size={20} />, tone: 'border-pasto-400 bg-pasto-50 text-pasto-700', obs: '' },
-  { value: 'vendido', label: 'Vendido', desc: 'Saiu do rebanho por venda', icon: <HandCoins size={20} />, tone: 'border-sky-400 bg-ceu-200/40 text-sky-800', obs: 'Comprador, valor, nº da GTA…' },
-  { value: 'obito', label: 'Óbito', desc: 'Morte do animal', icon: <HeartCrack size={20} />, tone: 'border-red-400 bg-red-50 text-red-700', obs: 'Causa provável, local…' },
+  { value: 'ativo', label: 'Ativo', desc: 'Animal ativo no rebanho', icon: <CircleCheck size={18} strokeWidth={1.75} />, tone: 'border-pasto-500 bg-pasto-50 text-pasto-800', obs: '' },
+  { value: 'vendido', label: 'Vendido', desc: 'Saiu do rebanho por venda', icon: <HandCoins size={18} strokeWidth={1.75} />, tone: 'border-slate-500 bg-ceu-100 text-slate-800', obs: 'Comprador, valor, nº da GTA…' },
+  { value: 'obito', label: 'Óbito', desc: 'Morte do animal', icon: <CircleX size={18} strokeWidth={1.75} />, tone: 'border-red-500 bg-red-50 text-red-800', obs: 'Causa provável, local…' },
 ];
 
 function StatusModal({ animal, onClose, onSaved }: { animal: Animal; onClose: () => void; onSaved: () => void }) {
@@ -140,13 +140,13 @@ function StatusModal({ animal, onClose, onSaved }: { animal: Animal; onClose: ()
               type="button"
               onClick={() => setStatus(s.value)}
               className={clsx(
-                'flex items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition',
-                status === s.value ? s.tone : 'border-palha-100 bg-white text-palha-600 hover:border-palha-200',
+                'flex items-center gap-3 rounded-md border px-4 py-3 text-left transition-colors',
+                status === s.value ? s.tone : 'border-palha-200 bg-white text-palha-600 hover:bg-palha-50',
               )}
             >
               {s.icon}
               <span>
-                <span className="block font-bold">{s.label}</span>
+                <span className="block text-sm font-medium">{s.label}</span>
                 <span className="block text-xs opacity-80">{s.desc}</span>
               </span>
             </button>
@@ -166,7 +166,7 @@ function StatusModal({ animal, onClose, onSaved }: { animal: Animal; onClose: ()
           </div>
         )}
         {status === 'ativo' && animal.status !== 'ativo' && (
-          <p className="rounded-xl bg-pasto-50 px-3 py-2 text-sm text-pasto-700">
+          <p className="rounded-md border border-pasto-200 bg-pasto-50 px-3 py-2 text-sm text-pasto-800">
             O animal volta para o rebanho ativo e a balança passa a aceitar as pesagens dele de novo.
           </p>
         )}
@@ -218,10 +218,10 @@ function DeleteModal({
   return (
     <Modal title="Remover animal" subtitle={`Animal ${animal.brinco_visual}`} onClose={onClose}>
       <form onSubmit={remove} className="space-y-4">
-        <div className="flex gap-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+        <div className="flex gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <AlertTriangle size={20} className="shrink-0" />
           <div className="space-y-1">
-            <p className="font-bold">Isso apaga o animal e todo o histórico de pesagens. Não dá para desfazer.</p>
+            <p className="font-medium">Isso apaga o animal e todo o histórico de pesagens. Não dá para desfazer.</p>
             <p>Use só para cadastros feitos por engano. Se o animal foi vendido ou morreu, mude a situação: o histórico fica guardado.</p>
           </div>
         </div>
@@ -269,7 +269,7 @@ export function AnimalActions({
   const close = () => setOpen(null);
 
   const btn = compact
-    ? 'grid h-9 w-9 place-items-center rounded-xl text-palha-500 transition hover:bg-pasto-50 hover:text-pasto-700'
+    ? 'grid h-9 w-9 place-items-center rounded-md text-palha-500 transition-colors hover:bg-palha-100 hover:text-palha-900'
     : '';
 
   return (
@@ -346,7 +346,7 @@ export function StatusInfo({ animal }: { animal: Animal }) {
   if (animal.status === 'ativo') return null;
   const label = animal.status === 'vendido' ? 'Vendido em' : 'Óbito em';
   return (
-    <p className={clsx('text-sm', animal.status === 'vendido' ? 'text-sky-800' : 'text-red-600')}>
+    <p className={clsx('text-sm', animal.status === 'vendido' ? 'text-slate-700' : 'text-red-700')}>
       {label} {dateOnly(animal.status_data)}
       {animal.status_obs && <span className="text-palha-500"> · {animal.status_obs}</span>}
     </p>
