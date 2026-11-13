@@ -48,7 +48,6 @@ export default function Login() {
               {busy ? 'Abrindo a porteira…' : 'Entrar'}
             </Button>
           </form>
-          <p className="mt-4 text-center text-xs text-palha-400">Demo: admin@cowtag.local / cowtag123</p>
         </div>
       </div>
     </Landscape>
