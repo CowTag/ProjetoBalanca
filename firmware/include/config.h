@@ -55,7 +55,7 @@
 #define MIN_WEIGHT_KG         0.020f    // abaixo disso = balança vazia
 // Multiplicador aplicado só no envio/exibição.
 // 1.0 = peso real da célula (5 kg). 1000.0 = "modo maquete" (1 g = 1 kg de boi).
-#define WEIGHT_SCALE_MULTIPLIER 1.0f
+#define WEIGHT_SCALE_MULTIPLIER 100.0f
 
 // ---------- Tempos ----------
 #define TAG_WAIT_STABLE_MS    10000     // tempo máx p/ estabilizar após ler a tag
