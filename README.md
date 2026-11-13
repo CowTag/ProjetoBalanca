@@ -3,7 +3,7 @@
 ```
 ┌────────────── ESP32 ──────────────┐        HTTP POST /api/v1/weighings        ┌──────────── Backend (Node/TS) ────────────┐
 │ MFRC522 ─┐                        │  ───────────────────────────────────────▶ │ Express + Zod + Prisma ──▶ PostgreSQL     │
-│ HX711  ──┼─ FreeRTOS (3 tasks) ───┤        POST /api/v1/telemetry             │ Autenticação por X-Device-Key (SHA-256)   │
+│ HX711  ──┼─ FreeRTOS (3 tasks) ───┤        POST /api/v1/telemetry             │                                            │
 │ LED    ──┤  buffer offline + NTP  │  ◀── 201 {brinco, ganho_kg} / 404 / 409   │ Socket.io ──▶ eventos em tempo real       │
 │ Web local┘ (status no celular)    │                                           └───────────────────┬───────────────────────┘
 └───────────────────────────────────┘                                                               │ REST + WebSocket
@@ -24,8 +24,6 @@ cowtag/
 
 ## 1. Subindo o ambiente (≈5 min)
 
-Pré-requisitos: Node 20+, Docker, VS Code + extensão PlatformIO.
-
 ```bash
 # Banco de dados
 docker compose up -d
@@ -44,7 +42,7 @@ npm install
 npm run dev                            # http://localhost:5173
 ```
 
-Login demo: **admin@cowtag.local / cowtag123** (ou operador@cowtag.local).
+Login demo: **admin@cowtag.local / cowtag123**
 
 ### Testando a API sem hardware
 
@@ -86,7 +84,6 @@ curl -X POST http://localhost:3000/api/v1/live \
 | **OLED SSD1306 I2C** *(opcional, `USE_OLED 1`)* | SDA / SCL | GPIO 21 / 22 |
 | **Célula 5 kg (barra) → HX711** | Vermelho E+, Preto E−, Branco A−, Verde A+ | — |
 
-> O MFRC522 **não** tolera 5 V. Bateria opcional: divisor 100k/100k em GPIO 34 e `PIN_BATTERY 34`.
 
 ### Montagem física (protótipo)
 
