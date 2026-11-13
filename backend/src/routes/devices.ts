@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { HttpError, ah } from '../lib/http';
 import { fid, hashKey, newDeviceKey, requireDevice, requireRole } from '../middleware/auth';
 import { ingestTelemetry, telemetrySchema } from '../services/ingest';
+import { isOnline } from '../lib/online';
 
 // ---------- Rotas do dashboard (usuário) ----------
 export const devicesRouter = Router();
@@ -47,6 +48,7 @@ devicesRouter.get(
     res.json(
       devices.map((d) => ({
         ...d,
+        status_online: isOnline(d),
         pesagens_hoje: contagem.find((c) => c.dispositivo_id === d.id)?._count._all ?? 0,
         telemetria: Object.fromEntries(
           ultimas.filter((u) => u.dispositivo_id === d.id).map((u) => [u.tipo_sensor, { valor: u.valor, timestamp: u.timestamp }]),

@@ -18,6 +18,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ESPmDNS.h>
 #include <WebServer.h>
 #include <SPI.h>
@@ -449,16 +450,31 @@ static void taskFlow(void *) {
 // ---------------------------------------------------------------------
 // Rede
 // ---------------------------------------------------------------------
+// API na internet (https://...) ou na rede local (http://...). Todas as chamadas
+// saem da taskNet, então um único cliente com conexão reaproveitada (keep-alive)
+// evita refazer o handshake TLS (~1-2 s) a cada envio.
+static const bool API_HTTPS = strncmp(API_BASE_URL, "https://", 8) == 0;
+static WiFiClientSecure g_tls;
+static WiFiClient g_plain;
+static HTTPClient g_http;
+
 static int postJson(const char *path, const String &body, String *resp, uint16_t timeoutMs = HTTP_TIMEOUT_MS) {
-  HTTPClient http;
   String url = String(API_BASE_URL) + path;
-  if (!http.begin(url)) return -1;
-  http.setTimeout(timeoutMs);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-Device-Key", DEVICE_KEY);
-  int code = http.POST(body);
-  if (resp && code > 0) *resp = http.getString();
-  http.end();
+  bool ok = API_HTTPS ? g_http.begin(g_tls, url) : g_http.begin(g_plain, url);
+  if (!ok) return -1;
+  g_http.setReuse(true);
+  // O primeiro handshake TLS pode passar de 2 s: na internet usa o timeout cheio
+  g_http.setConnectTimeout(API_HTTPS ? HTTP_TIMEOUT_MS : timeoutMs);
+  g_http.setTimeout(API_HTTPS ? HTTP_TIMEOUT_MS : timeoutMs);
+  g_http.addHeader("Content-Type", "application/json");
+  g_http.addHeader("X-Device-Key", DEVICE_KEY);
+  int code = g_http.POST(body);
+  if (resp && code > 0) *resp = g_http.getString();
+  if (code < 0) {
+    Serial.printf("[NET] %s -> falha: %s\n", url.c_str(), HTTPClient::errorToString(code).c_str());
+    API_HTTPS ? g_tls.stop() : g_plain.stop();   // descarta a conexão quebrada
+  }
+  g_http.end();   // com setReuse(true) mantém o socket aberto para o próximo envio
   g_serverOk = code > 0 && code < 500;
   return code;
 }
@@ -552,6 +568,11 @@ static void taskNet(void *) {
     uint8_t r = info.wifi_sta_disconnected.reason;
     Serial.printf("[NET] Wi-Fi desconectado, motivo %u %s\n", r, wifiReasonText(r));
   }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+
+  // HTTPS sem validar o certificado: protege contra quem só "escuta" a rede,
+  // mas não contra um servidor falso. Suficiente para o protótipo.
+  g_tls.setInsecure();
+  Serial.printf("[NET] Servidor: %s\n", API_BASE_URL);
 
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
@@ -676,7 +697,8 @@ static void handleStatus() {
   doc["fila"]        = g_pending;
   doc["wifi_rssi"]   = WiFi.RSSI();
   doc["servidor_ok"] = (bool)g_serverOk;
-  doc["ip"]          = WiFi.localIP().toString();
+  doc["servidor"]    = API_BASE_URL;
+  doc["ip"]       = WiFi.localIP().toString();
   doc["uptime_s"]    = millis() / 1000;
   doc["fator"]       = scale.get_scale();
   String out;
@@ -742,7 +764,7 @@ void setup() {
 
   xTaskCreatePinnedToCore(taskScale, "scale", 4096, nullptr, 3, nullptr, 1);
   xTaskCreatePinnedToCore(taskFlow,  "flow",  6144, nullptr, 2, nullptr, 1);
-  xTaskCreatePinnedToCore(taskNet,   "net",   8192, nullptr, 1, nullptr, 0);
+  xTaskCreatePinnedToCore(taskNet,   "net",   12288, nullptr, 1, nullptr, 0);
 #if USE_LOCAL_WEB
   xTaskCreatePinnedToCore(taskWeb,   "web",   6144, nullptr, 1, nullptr, 0);
 #endif

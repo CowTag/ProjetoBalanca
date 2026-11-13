@@ -49,7 +49,7 @@ $('peso').innerHTML=s.peso_kg.toFixed(3)+'<span class="un"> kg</span>';$('peso')
 $('stab').style.width=(s.estavel?100:Math.min(95,s.estabilidade*100))+'%';
 $('estado').textContent=s.estado.replace(/_/g,' ');$('estado').className='estado '+(cls[s.estado]??'');
 $('msg').textContent=s.mensagem;$('tag').textContent=s.tag||'—';$('fila').textContent=s.fila;
-$('rssi').textContent=s.wifi_rssi+' dBm';$('srv').textContent=s.servidor_ok?'OK':'sem resposta';$('ip').textContent=s.ip;
+$('rssi').textContent=s.wifi_rssi+' dBm';$('srv').textContent=(s.servidor_ok?'OK':'sem resposta')+(s.servidor?' · '+s.servidor.replace(/^https?:\/\//,''):'');$('ip').textContent=s.ip;
 $('up').textContent=Math.floor(s.uptime_s/60)+' min';
 const k=s.estado+s.tag+s.mensagem;if(k!==last&&s.estado!=='AGUARDANDO_TAG'){last=k;const d=document.createElement('div');
 d.textContent=new Date().toLocaleTimeString()+' · '+s.estado.replace(/_/g,' ')+(s.tag?' · '+s.tag:'')+' · '+s.mensagem;$('log').prepend(d);

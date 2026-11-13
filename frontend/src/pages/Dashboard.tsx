@@ -4,7 +4,7 @@ import { Activity, Beef, Cpu, Scale, TrendingUp } from 'lucide-react';
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { useRealtime } from '../lib/socket';
+import { usePolling, useRealtime } from '../lib/socket';
 import { dateTime, gmdFmt, kg, shortDay } from '../lib/format';
 import type { Overview, RankItem, Weighing } from '../lib/types';
 import { Badge, Card, CardHeader, Empty, ErrorBox, Kpi, Spinner } from '../components/ui';
@@ -29,6 +29,10 @@ export default function Dashboard() {
   );
   useRealtime('weighing:new', onWeighing);
   useRealtime('device:status', overview.reload);
+  usePolling(() => {
+    feed.reload();
+    overview.reload();
+  }, 15_000);
 
   const o = overview.data;
 

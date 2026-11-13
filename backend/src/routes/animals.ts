@@ -16,7 +16,19 @@ const baseSchema = z.object({
   data_nascimento: z.coerce.date().nullish(),
   sexo: z.enum(['M', 'F']),
   status: z.enum(['ativo', 'vendido', 'obito']).default('ativo'),
+  status_data: z.coerce.date().nullish(),
+  status_obs: z.string().trim().max(200).nullish(),
 });
+
+/**
+ * Coerência da situação: voltar para "ativo" limpa data/observação da saída;
+ * vendido/óbito sem data assume hoje.
+ */
+function normalizeStatus<T extends { status?: string; status_data?: Date | null; status_obs?: string | null }>(d: T): T {
+  if (d.status === 'ativo') return { ...d, status_data: null, status_obs: null };
+  if (d.status && !d.status_data) return { ...d, status_data: new Date() };
+  return d;
+}
 
 async function getOwned(id: string, fazendaId: string) {
   const a = await prisma.animal.findFirst({ where: { id, fazenda_id: fazendaId } });
@@ -95,7 +107,7 @@ animalsRouter.get(
 animalsRouter.post(
   '/',
   ah(async (req, res) => {
-    const data = baseSchema.parse(req.body);
+    const data = normalizeStatus(baseSchema.parse(req.body));
     const animal = await prisma.animal.create({ data: { ...data, fazenda_id: fid(req) } });
     res.status(201).json(animal);
   }),
@@ -105,7 +117,7 @@ animalsRouter.patch(
   '/:id',
   ah(async (req, res) => {
     const a = await getOwned(req.params.id, fid(req));
-    const data = baseSchema.partial().parse(req.body);
+    const data = normalizeStatus(baseSchema.partial().parse(req.body));
     res.json(await prisma.animal.update({ where: { id: a.id }, data }));
   }),
 );

@@ -1,13 +1,14 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
-import { api, ApiError } from '../lib/api';
+import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { useRealtime } from '../lib/socket';
+import { usePolling, useRealtime } from '../lib/socket';
 import { dateTime, gmdFmt, idadeMeses, kg } from '../lib/format';
 import type { Animal, StatusAnimal, Weighing } from '../lib/types';
 import { CowHead } from '../components/FarmArt';
-import { Button, Card, CardHeader, Empty, ErrorBox, Field, Spinner, StatusBadge } from '../components/ui';
+import { Button, Card, CardHeader, Empty, ErrorBox, Spinner, StatusBadge } from '../components/ui';
+import { AnimalActions, AnimalForm, StatusInfo } from '../components/AnimalManage';
 
 export default function Animals() {
   const [q, setQ] = useState('');
@@ -30,6 +31,7 @@ export default function Animals() {
     [],
   );
   useRealtime('weighing:new', onWeighing);
+  usePolling(list.reload, 30_000);
 
   return (
     <div className="space-y-6">
@@ -44,12 +46,19 @@ export default function Animals() {
       </div>
 
       {showForm && (
-        <NewAnimalForm
-          onDone={() => {
-            setShowForm(false);
-            list.reload();
-          }}
-        />
+        <Card>
+          <CardHeader title="Cadastrar animal" subtitle="Dica: passe a tag na balança e copie o UID do monitor Serial ou da mensagem 'TAG NAO CADASTRADA'" />
+          <div className="p-4">
+            <AnimalForm
+              columns="sm:grid-cols-2 lg:grid-cols-5"
+              onCancel={() => setShowForm(false)}
+              onSaved={() => {
+                setShowForm(false);
+                list.reload();
+              }}
+            />
+          </div>
+        </Card>
       )}
 
       <Card>
@@ -83,7 +92,34 @@ export default function Animals() {
         ) : list.data?.length === 0 ? (
           <Empty>Nenhum animal encontrado</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Celular: cartões */}
+          <ul className="divide-y divide-palha-100 md:hidden">
+            {list.data?.map((a) => (
+              <li key={a.id} className="flex items-start gap-3 p-4">
+                <Link to={`/animais/${a.id}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-pasto-50">
+                  <CowHead className="h-8 w-8" />
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link to={`/animais/${a.id}`} className="font-bold text-pasto-700">{a.brinco_visual}</Link>
+                    <StatusBadge status={a.status} />
+                  </div>
+                  <p className="truncate font-mono text-xs text-palha-500">{a.tag_rfid}</p>
+                  <p className="text-sm text-palha-700">
+                    {kg(a.ultimo_peso_kg)} · {gmdFmt(a.gmd_kg_dia)}
+                  </p>
+                  <p className="text-xs text-palha-500">
+                    {a.raca ?? 'Sem raça'} · {a.sexo === 'M' ? 'Macho' : 'Fêmea'} · {idadeMeses(a.data_nascimento)}
+                  </p>
+                  <StatusInfo animal={a} />
+                </div>
+                <AnimalActions compact animal={a} onChanged={list.reload} />
+              </li>
+            ))}
+          </ul>
+          {/* Desktop: tabela */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full">
               <thead className="bg-pasto-50/60">
                 <tr>
@@ -96,6 +132,7 @@ export default function Animals() {
                   <th className="th text-right">GMD</th>
                   <th className="th">Última pesagem</th>
                   <th className="th">Status</th>
+                  <th className="th"><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-palha-100">
@@ -119,60 +156,17 @@ export default function Animals() {
                     <td className="td">
                       <StatusBadge status={a.status} />
                     </td>
+                    <td className="td">
+                      <AnimalActions compact animal={a} onChanged={list.reload} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>
-  );
-}
-
-function NewAnimalForm({ onDone }: { onDone: () => void }) {
-  const [f, setF] = useState({ tag_rfid: '', brinco_visual: '', raca: 'Nelore', sexo: 'M', data_nascimento: '' });
-  const [err, setErr] = useState<string | null>(null);
-  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setErr(null);
-    try {
-      await api('/animals', { method: 'POST', json: { ...f, data_nascimento: f.data_nascimento || null } });
-      onDone();
-    } catch (e) {
-      setErr(e instanceof ApiError && e.code === 'DUPLICADO' ? 'Tag RFID já cadastrada' : 'Erro ao salvar — verifique os campos');
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader title="Cadastrar animal" subtitle="Dica: passe a tag na balança e copie o UID do monitor Serial ou da mensagem 'TAG NAO CADASTRADA'" />
-      <form onSubmit={submit} className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Field label="Tag RFID">
-          <input className="input font-mono" placeholder="43:A2:89:C1" value={f.tag_rfid} onChange={set('tag_rfid')} required />
-        </Field>
-        <Field label="Brinco visual">
-          <input className="input" placeholder="BR-0123" value={f.brinco_visual} onChange={set('brinco_visual')} required />
-        </Field>
-        <Field label="Raça">
-          <input className="input" value={f.raca} onChange={set('raca')} />
-        </Field>
-        <Field label="Sexo">
-          <select className="input" value={f.sexo} onChange={set('sexo')}>
-            <option value="M">Macho</option>
-            <option value="F">Fêmea</option>
-          </select>
-        </Field>
-        <Field label="Nascimento">
-          <input className="input" type="date" value={f.data_nascimento} onChange={set('data_nascimento')} />
-        </Field>
-        <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-5">
-          <Button>Salvar</Button>
-          <ErrorBox msg={err} />
-        </div>
-      </form>
-    </Card>
   );
 }

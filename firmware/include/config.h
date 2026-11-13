@@ -8,8 +8,10 @@
 #define WIFI_PASS        "1314152020"
 
 // ---------- API ----------
-// IP da máquina que roda o backend (não use "localhost": o ESP32 é outro host)
-#define API_BASE_URL     "http://192.168.0.10:3000"
+// Escolha UM dos dois (sem barra no final):
+//  - Internet (Vercel):  "https://SEU-PROJETO.vercel.app"  -> funciona de qualquer rede
+//  - Rede local:         "http://<IP do PC>:3000"           -> não use "localhost": o ESP32 é outro host
+#define API_BASE_URL     "http://192.168.0.111:3000"
 #define DEVICE_ID        "BALANCA_ESP32_01"     // = devices.identificador_esp32
 #define DEVICE_KEY       "dev-key-balanca-01"   // chave gerada no dashboard (seed usa esta)
 
@@ -22,7 +24,7 @@
 #define USE_OLED           0          // 0 = sem display | 1 = SSD1306 I2C
 #define USE_LOCAL_WEB      1          // página de status no ESP32
 #define MDNS_NAME          "cowtag-balanca"   // -> http://cowtag-balanca.local
-#define LIVE_PUSH_MIN_MS   1000       // intervalo mínimo entre envios "ao vivo"
+#define LIVE_PUSH_MIN_MS   2000       // intervalo mínimo entre envios "ao vivo" (o painel na Vercel atualiza a cada 2 s)
 #define LIVE_KEEPALIVE_MS  10000      // envia mesmo sem mudança a cada X ms
 
 // ---------- Pinagem ----------

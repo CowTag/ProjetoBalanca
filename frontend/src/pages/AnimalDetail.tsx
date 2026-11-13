@@ -1,17 +1,19 @@
 import { useCallback, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { useRealtime } from '../lib/socket';
+import { usePolling, useRealtime } from '../lib/socket';
 import { dateOnly, dateTime, gmdFmt, idadeMeses, kg } from '../lib/format';
-import type { AnimalDetail as AD, StatusAnimal, Weighing } from '../lib/types';
+import type { AnimalDetail as AD, Weighing } from '../lib/types';
 import { CowHead } from '../components/FarmArt';
+import { AnimalActions, StatusInfo } from '../components/AnimalManage';
 import { Button, Card, CardHeader, Empty, ErrorBox, Field, Kpi, Spinner, StatusBadge } from '../components/ui';
 
 export default function AnimalDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const a = useAsync(() => api<AD>(`/animals/${id}`), [id]);
   const [peso, setPeso] = useState('');
 
@@ -23,17 +25,13 @@ export default function AnimalDetail() {
     [id],
   );
   useRealtime('weighing:new', onWeighing);
+  usePolling(a.reload, 30_000);
 
   if (a.error) return <ErrorBox msg={a.error} />;
   if (!a.data) return <Spinner />;
   const d = a.data;
 
   const chart = d.pesagens.map((p) => ({ t: new Date(p.timestamp).getTime(), peso: p.peso_kg }));
-
-  const changeStatus = async (status: StatusAnimal) => {
-    await api(`/animals/${d.id}`, { method: 'PATCH', json: { status } });
-    a.reload();
-  };
 
   const addManual = async (e: FormEvent) => {
     e.preventDefault();
@@ -61,12 +59,9 @@ export default function AnimalDetail() {
             <span className="font-mono">{d.tag_rfid}</span> · {d.raca ?? 'Sem raça'} · {d.sexo === 'M' ? 'Macho' : 'Fêmea'} · Nasc.{' '}
             {dateOnly(d.data_nascimento)} ({idadeMeses(d.data_nascimento)})
           </p>
+          <StatusInfo animal={d} />
         </div>
-        <select className="input w-44" value={d.status} onChange={(e) => changeStatus(e.target.value as StatusAnimal)}>
-          <option value="ativo">Ativo</option>
-          <option value="vendido">Vendido</option>
-          <option value="obito">Óbito</option>
-        </select>
+        <AnimalActions animal={d} onChanged={a.reload} onDeleted={() => navigate('/animais', { replace: true })} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

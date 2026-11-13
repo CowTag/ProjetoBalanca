@@ -1,3 +1,4 @@
+import { isOnline } from '../lib/online';
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
@@ -21,7 +22,7 @@ metricsRouter.get(
     const [porStatus, ativos, devices, serie, hojeRows] = await Promise.all([
       prisma.animal.groupBy({ by: ['status'], where: { fazenda_id: fazendaId }, _count: { _all: true } }),
       prisma.animal.findMany({ where: { fazenda_id: fazendaId, status: 'ativo' }, select: { id: true, brinco_visual: true, raca: true } }),
-      prisma.device.findMany({ where: { fazenda_id: fazendaId }, select: { status_online: true } }),
+      prisma.device.findMany({ where: { fazenda_id: fazendaId }, select: { status_online: true, ultimo_contato: true } }),
       prisma.$queryRaw<{ dia: Date; total: number; peso_medio: number }[]>`
         SELECT date_trunc('day', w."timestamp" AT TIME ZONE ${tz}) AS dia,
                COUNT(*)::int AS total,
@@ -59,7 +60,7 @@ metricsRouter.get(
       pesagens_hoje: hojeRows[0]?.total ?? 0,
       peso_medio_rebanho_kg: avg(ultimos),
       gmd_medio_kg_dia: avg(gmds.map(([, s]) => s.gmd!)),
-      dispositivos: { total: devices.length, online: devices.filter((d) => d.status_online).length },
+      dispositivos: { total: devices.length, online: devices.filter(isOnline).length },
       serie_diaria: serie.map((s) => ({
         dia: s.dia.toISOString().slice(0, 10),
         total: s.total,

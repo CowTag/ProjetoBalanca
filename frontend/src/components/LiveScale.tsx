@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ExternalLink, Radio, Scale } from 'lucide-react';
 import { api } from '../lib/api';
-import { useRealtime } from '../lib/socket';
+import { usePolling, useRealtime } from '../lib/socket';
 import { Card, CardHeader, Empty } from './ui';
 import { Cow } from './FarmArt';
 
@@ -74,6 +74,14 @@ export function LiveScale({ showLog = true }: { showLog?: boolean }) {
     setStates((prev) => ({ ...prev, [s.dispositivo_id]: s }));
   }, []);
   useRealtime('scale:live', onLive);
+  usePolling(() => {
+    api<LiveState[]>('/live')
+      .then((list) => list.forEach((s) => {
+        const old = prevRef.current[s.dispositivo_id];
+        if (!old || old.recebido_em !== s.recebido_em) onLive(s);
+      }))
+      .catch(() => undefined);
+  }, 2000);
 
   const list = Object.values(states);
 

@@ -3,7 +3,7 @@ import { KeyRound, Plus } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { useRealtime } from '../lib/socket';
+import { usePolling, useRealtime } from '../lib/socket';
 import { useAuth } from '../hooks/useAuth';
 import { SENSOR_LABEL, num, relativo } from '../lib/format';
 import type { Device } from '../lib/types';
@@ -28,6 +28,7 @@ export default function Devices() {
   );
   useRealtime('device:status', onStatus);
   useRealtime('telemetry:new', list.reload);
+  usePolling(list.reload, 10_000);
 
   const rotate = async (d: Device) => {
     if (!confirm(`Gerar nova chave para ${d.nome}? A chave atual deixará de funcionar.`)) return;

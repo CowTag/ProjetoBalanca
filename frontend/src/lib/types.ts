@@ -25,6 +25,8 @@ export interface Animal {
   data_nascimento: string | null;
   sexo: 'M' | 'F';
   status: StatusAnimal;
+  status_data?: string | null; // data da venda / óbito
+  status_obs?: string | null;
   ultimo_peso_kg?: number | null;
   ultima_pesagem_em?: string | null;
   gmd_kg_dia?: number | null;

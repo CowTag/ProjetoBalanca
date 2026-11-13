@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Beef, ChevronDown, Cpu, Gauge, LogOut, Menu, Tractor, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { getSocket } from '../lib/socket';
+import { REALTIME_ENABLED, getSocket } from '../lib/socket';
 import { CowHead, Cow, FenceDivider } from './FarmArt';
 
 const links = [
@@ -92,6 +92,8 @@ export function Layout() {
   useEffect(() => setOpen(false), [location.pathname]);
 
   useEffect(() => {
+    // Sem Socket.io (Vercel) as telas se atualizam por polling
+    if (!REALTIME_ENABLED) return setLive(true);
     const s = getSocket();
     const on = () => setLive(true);
     const off = () => setLive(false);

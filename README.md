@@ -108,7 +108,7 @@ mosquitto_sub -t 'cowtag/+/resposta'
 
 ### Gravando o firmware
 
-1. Edite `firmware/include/config.h`: `WIFI_SSID`, `WIFI_PASS`, `API_BASE_URL` (IP do seu PC na rede, ex. `http://192.168.0.10:3000`), `DEVICE_ID`, `DEVICE_KEY`.
+1. Edite `firmware/include/config.h`: `WIFI_SSID`, `WIFI_PASS`, `API_BASE_URL` (internet: `https://SEU-PROJETO.vercel.app` · rede local: IP do seu PC, ex. `http://192.168.0.111:3000`), `DEVICE_ID`, `DEVICE_KEY`.
 2. `pio run -t upload && pio device monitor`
 
 ### Calibração da célula de carga (uma vez)
@@ -140,7 +140,7 @@ No monitor Serial (115200):
 | **Monitor Serial** | `pio device monitor` | `[ESTADO]`, `[PESO]`, `[NET]` linha a linha |
 | **LED azul (GPIO 2)** | na placa | 1 piscada = tag lida · aceso = estabilizando · 2 = registrado · 1 longa = erro · 3 = offline · pisca lento = sem Wi-Fi |
 
-O ESP32 envia o estado ao vivo para `POST /api/v1/live` quando algo muda (no máximo 1×/s, e a cada 10 s sem mudança). Esse estado fica só em memória no backend, não é gravado no banco, e chega ao dashboard pelo evento Socket.io `scale:live`. O IP do ESP32 aparece no Serial ao conectar no Wi-Fi e no card da balança no dashboard.
+O ESP32 envia o estado ao vivo para `POST /api/v1/live` quando algo muda (no máximo a cada 2 s, e a cada 10 s sem mudança). O último estado é gravado em `devices.live` (sobrescrito a cada envio) e chega ao dashboard pelo evento Socket.io `scale:live` (local) ou por polling de `GET /live` a cada 2 s (Vercel). O IP do ESP32 aparece no Serial ao conectar no Wi-Fi e no card da balança no dashboard.
 
 Para usar um OLED no futuro: `#define USE_OLED 1` no `config.h`.
 
@@ -162,7 +162,7 @@ Para usar um OLED no futuro: `#define USE_OLED 1` no `config.h`.
 | POST | `/live` | X-Device-Key | estado ao vivo da balança (não grava no banco) |
 | GET | `/live` | JWT | último estado de cada balança |
 | GET/POST | `/animals` | JWT | lista (com último peso e GMD) / cria |
-| GET/PATCH/DELETE | `/animals/:id` | JWT (DELETE admin) | detalhe com histórico e resumo |
+| GET/PATCH/DELETE | `/animals/:id` | JWT (DELETE admin) | detalhe com histórico e resumo / edita (inclui `status`, `status_data`, `status_obs`) / remove com o histórico |
 | POST | `/animals/:id/weighings` | JWT | pesagem manual |
 | GET/POST | `/devices` | JWT (POST admin) | lista com telemetria / cria (retorna `api_key` uma vez) |
 | POST | `/devices/:id/rotate-key` | admin | nova chave |
@@ -189,13 +189,37 @@ Tabelas e campos conforme a especificação (`farms`, `users`, `animals`, `devic
 - `users.senha_hash` — login
 - `devices.api_key_hash`, `devices.ultimo_contato` — autenticação do ESP32 e detecção de offline
 - `weight_logs.dispositivo_id` opcional — permite pesagem manual
+- `animals.status_data`, `animals.status_obs` — data e observação da venda/óbito
+- `devices.live`, `devices.live_em` — último estado "ao vivo" da balança (funciona na Vercel)
 - Índices em `(animal_id, timestamp)` e `(dispositivo_id, tipo_sensor, timestamp)`
 
 **GMD** (ganho médio diário) = (último peso − primeiro peso) / dias entre eles (mín. 1 dia).
 
 ---
 
-## 5. Próximos passos 
+## 5. Deploy na internet (Vercel + Supabase)
+
+Com o deploy, a balança envia para `https://SEU-PROJETO.vercel.app` de qualquer rede com internet, e o dashboard abre de qualquer lugar.
+
+1. Crie um projeto em [supabase.com](https://supabase.com) (região `South America (São Paulo)`) e guarde a senha do banco.
+2. Em **Connect → ORMs → Prisma**, copie as duas URLs:
+   - `DATABASE_URL`: pooler *transaction*, porta **6543**, com `?pgbouncer=true&connection_limit=1`
+   - `DIRECT_URL`: porta **5432** (usada só pelas migrations)
+3. Do seu PC, com essas URLs no `backend/.env`, crie as tabelas e os dados demo:
+   ```bash
+   cd backend
+   npx prisma migrate deploy
+   npm run db:seed
+   ```
+4. Na Vercel (**Settings → Environment Variables**): `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`. Faça um novo deploy.
+5. Teste: `https://SEU-PROJETO.vercel.app/health` deve responder `{"ok":true}`.
+6. No firmware, `API_BASE_URL = "https://SEU-PROJETO.vercel.app"` (sem barra no final) e grave no ESP32. No Serial deve aparecer `[NET] POST /weighings ... -> 201`.
+
+**Diferenças em relação ao modo local:** na Vercel (serverless) não há Socket.io, MQTT nem timers. O backend detecta `VERCEL=1` e o frontend é compilado com o tempo real desligado. As telas se atualizam por polling (balança ao vivo a cada 2 s, painel a cada 15 s), e o status online é calculado pelo `ultimo_contato` (offline após 90 s sem contato). O ESP32 usa HTTPS com a conexão reaproveitada, sem validar o certificado (`setInsecure`, suficiente para protótipo).
+
+---
+
+## 6. Próximos passos 
 
 - Firmware via MQTT (PubSubClient) usando os tópicos já suportados pelo backend.
 - Buffer offline persistente em LittleFS (hoje é em RAM).
