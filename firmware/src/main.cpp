@@ -574,9 +574,8 @@ static void taskNet(void *) {
   g_tls.setInsecure();
   Serial.printf("[NET] Servidor: %s\n", API_BASE_URL);
 
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);            // modem-sleep causa quedas e latência na STA
+  // WiFi.persistent/mode já são chamados no setup(), antes de criar as tasks.
+  WiFi.setSleep(false);           // modem-sleep causa quedas e latência na STA
   WiFi.setAutoReconnect(true);     // o próprio driver reconecta após uma queda
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   configTime(0, 0, "pool.ntp.org", "time.google.com");
@@ -758,6 +757,12 @@ void setup() {
   scale.set_scale(cal);
   scale.tare(20);
   Serial.printf("[SCALE] fator=%.2f, tara ok\n", cal);
+
+  // Inicializa a pilha TCP/IP (lwIP) ANTES de criar as tasks: o taskWeb chama
+  // web.begin() (abre socket) e, se rodar antes do taskNet, o lwIP ainda não
+  // existe -> "assert failed: xQueueSemaphoreTake ... (pxQueue)".
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
 
   qWeighings = xQueueCreate(8, sizeof(Weighing));
   qResults   = xQueueCreate(1, sizeof(NetResult));
