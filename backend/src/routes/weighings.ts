@@ -7,11 +7,7 @@ import { ingestWeighing, weighingSchema } from '../services/ingest';
 
 export const weighingsRouter = Router();
 
-/**
- * POST /api/v1/weighings  (ESP32, header X-Device-Key)
- * Body: { device_id, rfid_tag, weight_kg, timestamp? }
- * 201 criado | 200 duplicado | 404 tag não cadastrada | 409 animal inativo | 401 chave inválida | 422 payload
- */
+// Recebe pesagem do ESP32
 weighingsRouter.post(
   '/',
   requireDevice,
@@ -22,7 +18,7 @@ weighingsRouter.post(
   }),
 );
 
-/** GET /api/v1/weighings?limit=20&animal_id=  (dashboard) */
+// Listar pesagens
 weighingsRouter.get(
   '/',
   requireUser,

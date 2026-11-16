@@ -4,10 +4,7 @@ import { apiBase, tokenStore } from './api';
 
 let socket: Socket | null = null;
 
-/**
- * Na Vercel o backend é serverless e não mantém WebSocket: o tempo real é
- * desligado no build (VITE_REALTIME=false) e as telas passam a fazer polling.
- */
+// Tempo real (desligado na Vercel)
 export const REALTIME_ENABLED = import.meta.env.VITE_REALTIME !== 'false';
 
 export function getSocket(): Socket {
@@ -26,7 +23,7 @@ export function closeSocket() {
   socket = null;
 }
 
-/** Assina um evento em tempo real enquanto o componente estiver montado. */
+// Escuta um evento em tempo real
 export function useRealtime<T>(event: string, handler: (data: T) => void) {
   useEffect(() => {
     if (!REALTIME_ENABLED) return;
@@ -38,10 +35,7 @@ export function useRealtime<T>(event: string, handler: (data: T) => void) {
   }, [event, handler]);
 }
 
-/**
- * Sem tempo real (Vercel): chama `fn` a cada `ms` enquanto a aba estiver visível.
- * Com Socket.io ativo não faz nada — os eventos já mantêm a tela atualizada.
- */
+// Polling (sem tempo real)
 export function usePolling(fn: () => unknown, ms: number) {
   const ref = useRef(fn);
   ref.current = fn;

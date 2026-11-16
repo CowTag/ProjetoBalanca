@@ -4,12 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Verde institucional (primária) — sóbrio, alto contraste
+        // Verde (primária)
         pasto: {
           50: '#eef6f1', 100: '#d5eadc', 200: '#acd4bb', 300: '#7bb894', 400: '#4b9a6f',
           500: '#2a7d53', 600: '#1f6643', 700: '#195237', 800: '#15412d', 900: '#0f3022',
         },
-        // Neutros (cinza grafite)
+        // Cinza
         palha: {
           50: '#f6f7f9', 100: '#eceff2', 200: '#dfe3e8', 300: '#c6ccd4', 400: '#959eaa', 500: '#677180',
           600: '#4c5563', 700: '#363d48', 800: '#232831', 900: '#14181e',

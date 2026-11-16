@@ -5,9 +5,7 @@ import { HttpError } from '../lib/http';
 import { normalizeTag, round3 } from '../lib/livestock';
 import { emitToFarm } from '../realtime';
 
-// ------------------------------------------------------------------
-// Schemas das payloads vindas do ESP32 (HTTP)
-// ------------------------------------------------------------------
+// Validação dos dados do ESP32
 export const weighingSchema = z.object({
   device_id: z.string().min(1),
   rfid_tag: z.string().min(4).max(40),
@@ -25,8 +23,7 @@ export const telemetrySchema = z.object({
 });
 export type TelemetryInput = z.infer<typeof telemetrySchema>;
 
-// ------------------------------------------------------------------
-/** Marca o dispositivo como online e notifica o dashboard se mudou de estado. */
+// Marca o dispositivo como online
 export async function touchDevice(device: Device) {
   const updated = await prisma.device.update({
     where: { id: device.id },
@@ -41,12 +38,12 @@ export async function touchDevice(device: Device) {
   }
 }
 
-/** Resolve o timestamp enviado pelo ESP32 (ou usa o horário do servidor). */
+// Data/hora da pesagem
 function resolveTimestamp(ts?: string): Date {
   const now = new Date();
   if (!ts) return now;
   const d = new Date(ts);
-  // relógio do ESP adiantado > 5 min: confia no servidor
+  // Relógio do ESP adiantado: usa o do servidor
   return d.getTime() - now.getTime() > 5 * 60_000 ? now : d;
 }
 
@@ -62,7 +59,7 @@ export async function ingestWeighing(device: Device, input: WeighingInput) {
   const ts = resolveTimestamp(input.timestamp);
   const peso = round3(input.weight_kg);
 
-  // Idempotência: reenvio do buffer offline com mesmo timestamp
+  // Evita pesagem duplicada
   const dup = await prisma.weightLog.findFirst({
     where: { animal_id: animal.id, dispositivo_id: device.id, timestamp: ts },
   });

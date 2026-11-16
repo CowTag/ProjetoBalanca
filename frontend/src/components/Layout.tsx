@@ -75,7 +75,7 @@ export function Layout() {
   useEffect(() => setOpen(false), [location.pathname]);
 
   useEffect(() => {
-    // Sem Socket.io (Vercel) as telas se atualizam por polling
+    // Atualização por polling
     if (!REALTIME_ENABLED) return setLive(true);
     const s = getSocket();
     const on = () => setLive(true);

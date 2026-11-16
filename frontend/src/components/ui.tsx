@@ -1,4 +1,4 @@
-// Componentes base no estilo shadcn/ui (Tailwind puro), tema corporativo sóbrio.
+// Componentes base
 import clsx from 'clsx';
 import { Inbox } from 'lucide-react';
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
@@ -133,7 +133,7 @@ export function Spinner() {
   return <div className="h-5 w-5 animate-spin rounded-full border-2 border-palha-300 border-t-pasto-600" />;
 }
 
-/** Título de página padronizado. */
+// Título da página
 export function PageTitle({ title, subtitle, action }: { title: ReactNode; subtitle?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 border-b border-palha-200 pb-4">
@@ -146,7 +146,7 @@ export function PageTitle({ title, subtitle, action }: { title: ReactNode; subti
   );
 }
 
-/** Controle segmentado (filtros). */
+// Filtro segmentado
 export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
   return (
     <div className="inline-flex rounded-md border border-palha-300 bg-white p-0.5">
@@ -167,7 +167,7 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
   );
 }
 
-/** Logo do produto (brinco CowTag). Altura controlada por `className` (padrão h-9). */
+// Logo
 export function BrandMark({ className }: { className?: string }) {
   return <img src="/logo.png" alt="CowTag" draggable={false} className={clsx('h-9 w-auto shrink-0 select-none', className)} />;
 }

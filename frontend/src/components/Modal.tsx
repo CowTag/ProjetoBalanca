@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
-/** Janela sobreposta. No celular abre como "gaveta" de baixo; no desktop, centralizada. */
+// Janela modal
 export function Modal({ title, subtitle, onClose, children }: { title: ReactNode; subtitle?: ReactNode; onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();

@@ -8,7 +8,7 @@ export class HttpError extends Error {
   }
 }
 
-/** Envolve handlers async para que erros caiam no errorHandler. */
+// Trata erros de rotas async
 export const ah =
   (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
   (req, res, next) => {

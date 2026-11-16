@@ -1,9 +1,3 @@
-/**
- * Dados de demonstração:
- *   admin@cowtag.local / cowtag123   (admin)
- *   operador@cowtag.local / cowtag123 (operador)
- *   Dispositivo BALANCA_ESP32_01 com chave "dev-key-balanca-01"
- */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
@@ -11,7 +5,7 @@ import crypto from 'node:crypto';
 const prisma = new PrismaClient();
 const hashKey = (k: string) => crypto.createHash('sha256').update(k).digest('hex');
 
-// PRNG determinístico p/ dados reproduzíveis
+// Gerador aleatório fixo
 let seed = 42;
 const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const between = (a: number, b: number) => a + rand() * (b - a);
@@ -70,7 +64,7 @@ async function main() {
       },
     });
 
-    // pesagens a cada ~15 dias nos últimos 120 dias
+    // Pesagens
     let peso = between(220, 320);
     const gmd = between(0.45, 1.15);
     for (let d = 120; d >= 0; d -= Math.round(between(12, 18))) {
@@ -86,7 +80,7 @@ async function main() {
     }
   }
 
-  // telemetria das últimas 24h (a cada 30 min)
+  // Telemetria
   const tel = [];
   for (let m = 24 * 60; m >= 0; m -= 30) {
     const ts = new Date(hoje - m * 60_000);

@@ -5,10 +5,7 @@ import { verifyToken } from './middleware/auth';
 
 let io: Server | null = null;
 
-/**
- * Socket.io: o dashboard conecta com { auth: { token } } e entra na sala da sua fazenda.
- * Eventos emitidos: "weighing:new", "device:status", "telemetry:new"
- */
+// Tempo real (Socket.io)
 export function initRealtime(server: HttpServer) {
   io = new Server(server, { cors: { origin: env.CORS_ORIGIN } });
 

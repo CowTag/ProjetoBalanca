@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { gmd } from '../lib/livestock';
 
-/** Primeira e última pesagem de cada animal (uma query para cada ponta). */
+// Primeira e última pesagem de cada animal
 export async function firstAndLastWeights(animalIds: string[]) {
   if (animalIds.length === 0) return new Map<string, { primeira: P; ultima: P; gmd: number | null }>();
   const select = { animal_id: true, peso_kg: true, timestamp: true } as const;

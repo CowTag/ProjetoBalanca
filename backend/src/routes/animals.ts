@@ -20,10 +20,7 @@ const baseSchema = z.object({
   status_obs: z.string().trim().max(200).nullish(),
 });
 
-/**
- * Coerência da situação: voltar para "ativo" limpa data/observação da saída;
- * vendido/óbito sem data assume hoje.
- */
+// Ajusta data/observação da situação
 function normalizeStatus<T extends { status?: string; status_data?: Date | null; status_obs?: string | null }>(d: T): T {
   if (d.status === 'ativo') return { ...d, status_data: null, status_obs: null };
   if (d.status && !d.status_data) return { ...d, status_data: new Date() };
@@ -36,7 +33,7 @@ async function getOwned(id: string, fazendaId: string) {
   return a;
 }
 
-// Lista com último peso e GMD
+// Listar animais
 animalsRouter.get(
   '/',
   ah(async (req, res) => {
@@ -68,7 +65,7 @@ animalsRouter.get(
   }),
 );
 
-// Detalhe + histórico de pesagens
+// Detalhe do animal
 animalsRouter.get(
   '/:id',
   ah(async (req, res) => {
@@ -132,7 +129,7 @@ animalsRouter.delete(
   }),
 );
 
-// Pesagem manual (sem balança)
+// Pesagem manual
 animalsRouter.post(
   '/:id/weighings',
   ah(async (req, res) => {

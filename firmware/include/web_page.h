@@ -1,6 +1,5 @@
 #pragma once
-// Página de status servida pelo próprio ESP32 (abre no celular/PC na mesma rede).
-// Faz polling em /status a cada 500 ms. Sem dependências externas.
+// Página de status local
 static const char WEB_PAGE[] PROGMEM = R"HTML(<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CowTag · Balança</title>

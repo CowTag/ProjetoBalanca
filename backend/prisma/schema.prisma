@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url       = env("DATABASE_URL") // app (Supabase: pooler, porta 6543)
-  directUrl = env("DIRECT_URL")   // migrations (Supabase: conexão direta, porta 5432)
+  url       = env("DATABASE_URL") // conexão do app
+  directUrl = env("DIRECT_URL")   // conexão das migrations
 }
 
 enum Funcao {
@@ -62,7 +62,7 @@ model Animal {
   sexo            Sexo
   status          StatusAnimal @default(ativo)
   status_data     DateTime?    @db.Date // data da venda / óbito
-  status_obs      String?      // comprador, valor, causa da morte...
+  status_obs      String?      // observação
   fazenda_id      String
   criado_em       DateTime     @default(now())
 
@@ -80,7 +80,7 @@ model Device {
   status_online       Boolean   @default(false)
   ultimo_contato      DateTime?
   api_key_hash        String
-  live                Json?     // último estado "ao vivo" enviado pela balança
+  live                Json?     // último estado ao vivo
   live_em             DateTime?
   fazenda_id          String
   criado_em           DateTime  @default(now())

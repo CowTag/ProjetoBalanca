@@ -29,13 +29,13 @@ app.get('/health', async (_req, res) => {
   res.json({ ok: true, ts: new Date() });
 });
 
-// Públicas / dispositivos
+// Rotas públicas e do dispositivo
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/weighings', weighingsRouter);       // POST = dispositivo, GET = usuário
 app.use('/api/v1/telemetry', telemetryIngestRouter); // dispositivo
 app.use('/api/v1/live', liveRouter);                 // POST = dispositivo, GET = usuário
 
-// Autenticadas (usuário)
+// Rotas do usuário
 app.use('/api/v1/animals', requireUser, animalsRouter);
 app.use('/api/v1/devices', requireUser, devicesRouter);
 app.use('/api/v1/metrics', requireUser, metricsRouter);
@@ -43,14 +43,12 @@ app.use('/api/v1', requireUser, farmRouter);          // /farm, /users
 
 app.use(errorHandler);
 
-// Na Vercel (serverless) não há processo contínuo: sem WebSocket nem timers.
-// O app é exportado e a Vercel cuida de cada requisição. O status online/offline é
-// calculado na leitura (lib/online.ts) e o dashboard faz polling.
+// Vercel: exporta o app (sem WebSocket)
 if (!process.env.VERCEL) {
   const server = http.createServer(app);
   initRealtime(server);
 
-  // Marca como offline dispositivos sem contato recente (avisa o dashboard via socket)
+  // Marca dispositivos offline
   setInterval(async () => {
     const limite = new Date(Date.now() - env.DEVICE_OFFLINE_AFTER_S * 1000);
     const stale = await prisma.device.findMany({

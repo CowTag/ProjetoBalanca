@@ -6,14 +6,7 @@ import { prisma } from '../lib/prisma';
 import { fid, requireDevice, requireUser } from '../middleware/auth';
 import { emitToFarm } from '../realtime';
 
-/**
- * Estado "ao vivo" das balanças (peso atual, etapa da pesagem, última mensagem).
- * Fica gravado na própria linha do dispositivo (devices.live), sobrescrito a cada
- * envio — assim funciona também na Vercel, onde não há memória compartilhada.
- *
- *   POST /api/v1/live   (ESP32, X-Device-Key)  -> grava + emite "scale:live" (Socket.io, se local)
- *   GET  /api/v1/live   (usuário)              -> último estado de cada balança (polling)
- */
+// Balança ao vivo
 export const liveRouter = Router();
 
 const liveSchema = z.object({
@@ -34,7 +27,7 @@ export type LiveState = z.infer<typeof liveSchema> & {
   recebido_em: string;
 };
 
-/** Estados mais antigos que isso não aparecem no painel (balança desligada). */
+// Validade do estado ao vivo
 const LIVE_MAX_AGE_MS = 60_000;
 
 liveRouter.post(
@@ -46,7 +39,7 @@ liveRouter.post(
     const agora = new Date();
     const state: LiveState = { ...data, dispositivo_id: device.id, nome: device.nome, recebido_em: agora.toISOString() };
 
-    // Uma única escrita: estado ao vivo + online/último contato
+    // Salva estado ao vivo
     await prisma.device.update({
       where: { id: device.id },
       data: { live: state as unknown as Prisma.InputJsonValue, live_em: agora, status_online: true, ultimo_contato: agora },

@@ -7,7 +7,7 @@ import { fid, requireRole } from '../middleware/auth';
 
 export const farmRouter = Router();
 
-// ---------- Fazenda do usuário ----------
+// Fazenda
 farmRouter.get(
   '/farm',
   ah(async (req, res) => {
@@ -30,7 +30,7 @@ farmRouter.put(
   }),
 );
 
-// ---------- Usuários / perfis ----------
+// Usuários
 const userSelect = { id: true, nome: true, email: true, funcao: true, criado_em: true } as const;
 
 farmRouter.get(

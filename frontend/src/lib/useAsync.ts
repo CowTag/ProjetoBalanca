@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-/** Carrega dados de forma assíncrona com estado de loading/erro e reload(). */
+// Carrega dados (loading/erro/reload)
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);

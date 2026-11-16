@@ -6,7 +6,7 @@ import { fid, hashKey, newDeviceKey, requireDevice, requireRole } from '../middl
 import { ingestTelemetry, telemetrySchema } from '../services/ingest';
 import { isOnline } from '../lib/online';
 
-// ---------- Rotas do dashboard (usuário) ----------
+// Rotas do usuário
 export const devicesRouter = Router();
 
 const publicFields = {
@@ -125,7 +125,7 @@ devicesRouter.get(
   }),
 );
 
-// ---------- Rota do ESP32 (X-Device-Key) ----------
+// Rota do ESP32
 export const telemetryIngestRouter = Router();
 telemetryIngestRouter.post(
   '/',

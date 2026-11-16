@@ -42,7 +42,7 @@ const STALE_MS = 15_000;
 
 type LogItem = { id: number; hora: string; nome: string; estado: string; tag: string; mensagem: string };
 
-/** Painel "Balança ao vivo": substitui o display físico da balança. */
+// Painel da balança ao vivo
 export function LiveScale({ showLog = true }: { showLog?: boolean }) {
   const [states, setStates] = useState<Record<string, LiveState>>({});
   const [log, setLog] = useState<LogItem[]>([]);

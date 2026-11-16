@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // Desliga o tempo real (Socket.io) em builds na Vercel (VERCEL=1): lá o app faz polling
+    // Desliga o tempo real na Vercel
     'import.meta.env.VITE_REALTIME': JSON.stringify(
       process.env.VITE_REALTIME ?? (process.env.VERCEL ? 'false' : 'true'),
     ),

@@ -1,20 +1,4 @@
-// =====================================================================
-//  CowTag - Firmware da balança pecuária (ESP32 + FreeRTOS)
-//
-//  Sem buzzer. OLED opcional (USE_OLED). O acompanhamento é feito por:
-//   - Monitor Serial (logs [ESTADO], [PESO], [NET])
-//   - Página local no ESP32 (http://cowtag-balanca.local)
-//   - Dashboard web, painel "Balança ao vivo" (POST /api/v1/live)
-//   - LED onboard (GPIO 2)
-//
-//  Tarefas:
-//   - taskScale (core 1): lê HX711 ~10 Hz, média móvel + detecção de estabilidade
-//   - taskFlow  (core 1): RFID -> espera peso estável -> captura -> resultado
-//   - taskNet   (core 0): Wi-Fi, NTP, envio HTTP com buffer offline, telemetria, ao vivo
-//   - taskWeb   (core 0): página/JSON de status local
-//   - taskLed   (core 1): padrões de piscada do LED
-//   - loop()          : comandos Serial (t = tara, c <gramas> = calibrar, i = info)
-// =====================================================================
+// CowTag - Firmware da balança (ESP32)
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -37,13 +21,11 @@
 Adafruit_SSD1306 oled(128, 64, &Wire, -1);
 #endif
 
-// ---------------------------------------------------------------------
 // Tipos e estado compartilhado
-// ---------------------------------------------------------------------
 struct Weighing {
   char     tag[24];
   float    kg;
-  char     ts[25];   // ISO-8601 UTC ou "" se relógio não sincronizado
+  char     ts[25];   // data/hora ISO
   uint32_t seq;
 };
 
@@ -57,7 +39,7 @@ struct NetResult {
   bool       hasGanho;
 };
 
-// Estado "ao vivo" exibido no Serial, na página local e no dashboard
+// Estado ao vivo
 struct LiveState {
   char     estado[24];   // AGUARDANDO_TAG, ESTABILIZANDO, ENVIANDO, REGISTRADO, ...
   char     tag[24];
@@ -68,13 +50,13 @@ struct LiveState {
 enum class LedEvent : uint8_t { NONE, TAG, OK, ERROR, WARN };
 
 static QueueHandle_t     qWeighings;   // flow -> net
-static QueueHandle_t     qResults;     // net -> flow (tamanho 1, xQueueOverwrite)
+static QueueHandle_t     qResults;     // net -> flow
 static SemaphoreHandle_t liveMux;
 
 static portMUX_TYPE   scaleMux = portMUX_INITIALIZER_UNLOCKED;
-static float          g_avgKg  = 0;      // média móvel (kg brutos da célula)
+static float          g_avgKg  = 0;      // média móvel (kg)
 static bool           g_stable = false;
-static float          g_stability = 0;   // 0..1 (para a barra da página local)
+static float          g_stability = 0;   // 0..1
 static volatile bool  g_reqTare  = false;
 static volatile float g_reqCalKg = 0;
 static volatile uint8_t g_pending = 0;
@@ -90,9 +72,7 @@ Preferences prefs;
 WebServer   web(80);
 #endif
 
-// ---------------------------------------------------------------------
 // Utilidades
-// ---------------------------------------------------------------------
 static void readScale(float &kg, bool &stable, float *stability = nullptr) {
   portENTER_CRITICAL(&scaleMux);
   kg = g_avgKg;
@@ -112,7 +92,7 @@ static bool isoNow(char *out, size_t n) {
   return true;
 }
 
-/** Atualiza o estado ao vivo e registra no Serial quando muda. */
+// Atualiza o estado ao vivo
 static void setLive(const char *estado, const char *tag, const char *fmt, ...) {
   char msg[64];
   va_list ap;
@@ -140,12 +120,7 @@ static LiveState getLive() {
   return s;
 }
 
-// ---------------------------------------------------------------------
-// LED de status (substitui o buzzer)
-//  1 piscada curta  = tag lida        | aceso fixo = estabilizando
-//  2 piscadas       = registrado      | 1 longa    = erro / tag não cadastrada
-//  3 piscadas       = salvo offline   | pisca lento = sem Wi-Fi
-// ---------------------------------------------------------------------
+// LED de status
 static void ledWrite(bool on) {
 #if PIN_STATUS_LED >= 0
   digitalWrite(PIN_STATUS_LED, (on ^ STATUS_LED_ACTIVE_LOW) ? HIGH : LOW);
@@ -185,9 +160,7 @@ static void taskLed(void *) {
 
 static void feedback(LedEvent e) { g_ledEvent = e; }
 
-// ---------------------------------------------------------------------
 // OLED (opcional)
-// ---------------------------------------------------------------------
 #if USE_OLED
 static void oledShow(const char *title, const char *big, const char *foot) {
   oled.clearDisplay();
@@ -213,10 +186,8 @@ static void oledWeight(const char *title, float kg, const char *foot) {
 #endif
 }
 
-// ---------------------------------------------------------------------
 // RFID
-// ---------------------------------------------------------------------
-/** Inicializa o MFRC522 e confere se ele responde no SPI. */
+// Inicia o leitor RFID
 static bool rfidInit(bool verbose) {
   rfid.PCD_Init();
   delay(5);
@@ -231,22 +202,21 @@ static bool rfidInit(bool verbose) {
   return ok;
 }
 
-/** Verifica periodicamente se o leitor travou (ruído/queda de tensão) e reinicia. */
+// Reinicia o leitor se travar
 static void rfidHealthCheck() {
   static uint32_t last = 0;
   if (millis() - last < 3000) return;
   last = millis();
   byte v = rfid.PCD_ReadRegister(MFRC522::VersionReg);
   byte tx = rfid.PCD_ReadRegister(MFRC522::TxControlReg);
-  if (v == 0x00 || v == 0xFF || (tx & 0x03) != 0x03) {   // sem resposta ou antena desligada
+  if (v == 0x00 || v == 0xFF || (tx & 0x03) != 0x03) {   // sem resposta
     Serial.printf("[RFID] leitor travado (ver=0x%02X tx=0x%02X), reiniciando...\n", v, tx);
     rfidInit(false);
   }
 }
 
 static bool readTag(char *out, size_t n) {
-  // REQA só detecta cartões em IDLE. Se a tag ficou no leitor após um HaltA
-  // (ex.: pesagem instável), é preciso WUPA para acordá-la de novo.
+  // Acorda a tag que ficou no leitor
   if (!rfid.PICC_IsNewCardPresent()) {
     byte atqa[2]; byte sz = sizeof(atqa);
     MFRC522::StatusCode s = rfid.PICC_WakeupA(atqa, &sz);
@@ -262,9 +232,7 @@ static bool readTag(char *out, size_t n) {
   return true;
 }
 
-// ---------------------------------------------------------------------
 // Tarefa: Balança (média móvel + estabilidade)
-// ---------------------------------------------------------------------
 static void taskScale(void *) {
   float buf[MA_WINDOW] = {0};
   int idx = 0, count = 0;
@@ -318,9 +286,7 @@ static void taskScale(void *) {
   }
 }
 
-// ---------------------------------------------------------------------
 // Tarefa: Fluxo de pesagem
-// ---------------------------------------------------------------------
 static void taskFlow(void *) {
   char lastTag[24] = "";
   uint32_t lastTagAt = 0, seq = 0, lastIdle = 0, lastWeightLog = 0;
@@ -338,7 +304,7 @@ static void taskFlow(void *) {
         oledWeight("Aproxime a TAG", kg, st ? "Estavel" : "...");
         lastIdle = millis();
       }
-      // Log de peso no Serial a cada 1 s quando muda
+      // Log de peso
       if (millis() - lastWeightLog > 1000 && fabsf(kg - lastLoggedKg) > STABLE_TOLERANCE_KG / 2) {
         Serial.printf("[PESO] %.3f kg %s\n", displayKg(kg), st ? "(estavel)" : "");
         lastLoggedKg = kg;
@@ -447,12 +413,8 @@ static void taskFlow(void *) {
   }
 }
 
-// ---------------------------------------------------------------------
 // Rede
-// ---------------------------------------------------------------------
-// API na internet (https://...) ou na rede local (http://...). Todas as chamadas
-// saem da taskNet, então um único cliente com conexão reaproveitada (keep-alive)
-// evita refazer o handshake TLS (~1-2 s) a cada envio.
+// Cliente HTTP/HTTPS
 static const bool API_HTTPS = strncmp(API_BASE_URL, "https://", 8) == 0;
 static WiFiClientSecure g_tls;
 static WiFiClient g_plain;
@@ -463,7 +425,7 @@ static int postJson(const char *path, const String &body, String *resp, uint16_t
   bool ok = API_HTTPS ? g_http.begin(g_tls, url) : g_http.begin(g_plain, url);
   if (!ok) return -1;
   g_http.setReuse(true);
-  // O primeiro handshake TLS pode passar de 2 s: na internet usa o timeout cheio
+  // Timeout maior no HTTPS
   g_http.setConnectTimeout(API_HTTPS ? HTTP_TIMEOUT_MS : timeoutMs);
   g_http.setTimeout(API_HTTPS ? HTTP_TIMEOUT_MS : timeoutMs);
   g_http.addHeader("Content-Type", "application/json");
@@ -474,7 +436,7 @@ static int postJson(const char *path, const String &body, String *resp, uint16_t
     Serial.printf("[NET] %s -> falha: %s\n", url.c_str(), HTTPClient::errorToString(code).c_str());
     API_HTTPS ? g_tls.stop() : g_plain.stop();   // descarta a conexão quebrada
   }
-  g_http.end();   // com setReuse(true) mantém o socket aberto para o próximo envio
+  g_http.end();   // mantém a conexão aberta
   g_serverOk = code > 0 && code < 500;
   return code;
 }
@@ -526,7 +488,7 @@ static void sendTelemetry() {
   Serial.printf("[NET] telemetria -> %d\n", code);
 }
 
-/** Estado ao vivo para o dashboard (não é gravado no banco). */
+// Envia estado ao vivo
 static void sendLive(const LiveState &s, float kg, bool stable) {
   JsonDocument doc;
   doc["device_id"] = DEVICE_ID;
@@ -569,19 +531,17 @@ static void taskNet(void *) {
     Serial.printf("[NET] Wi-Fi desconectado, motivo %u %s\n", r, wifiReasonText(r));
   }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-  // HTTPS sem validar o certificado: protege contra quem só "escuta" a rede,
-  // mas não contra um servidor falso. Suficiente para o protótipo.
+  // HTTPS sem validar certificado
   g_tls.setInsecure();
   Serial.printf("[NET] Servidor: %s\n", API_BASE_URL);
 
-  // WiFi.persistent/mode já são chamados no setup(), antes de criar as tasks.
-  WiFi.setSleep(false);           // modem-sleep causa quedas e latência na STA
-  WiFi.setAutoReconnect(true);     // o próprio driver reconecta após uma queda
+  WiFi.setSleep(false);           // sem economia de energia
+  WiFi.setAutoReconnect(true);     // reconexão automática
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   configTime(0, 0, "pool.ntp.org", "time.google.com");
 
   uint32_t lastHb = 0, nextRetry = 0, lastWifiTry = millis(), backoff = 2000;
-  uint32_t wifiRetryMs = 30000;    // só força reconexão se o auto-reconnect não resolver
+  uint32_t wifiRetryMs = 30000;    // intervalo de reconexão
   uint32_t lastLive = 0, lastLiveVersion = 0;
   float lastLiveKg = -1;
   bool wasConnected = false;
@@ -609,7 +569,7 @@ static void taskNet(void *) {
       if (MDNS.begin(MDNS_NAME)) MDNS.addService("http", "tcp", 80);
       wifiRetryMs = 30000;
     }
-    if (!connected && wasConnected) lastWifiTry = millis();   // dá tempo ao auto-reconnect
+    if (!connected && wasConnected) lastWifiTry = millis();   // espera o auto-reconnect
     wasConnected = connected;
 
     if (!connected) {
@@ -639,8 +599,8 @@ static void taskNet(void *) {
       else if (code == 200)               res.r = SendResult::DUPLICATE;
       else if (code == 404)               res.r = SendResult::UNKNOWN_TAG;
       else if (code == 409)               res.r = SendResult::INACTIVE;
-      else if (code >= 400 && code < 500) res.r = SendResult::ERROR;   // payload/chave inválida: não adianta repetir
-      else { res.r = SendResult::QUEUED; drop = false; }               // timeout / 5xx: tenta depois
+      else if (code >= 400 && code < 500) res.r = SendResult::ERROR;   // erro de payload/chave
+      else { res.r = SendResult::QUEUED; drop = false; }               // tenta depois
 
       xQueueOverwrite(qResults, &res);
 
@@ -656,7 +616,7 @@ static void taskNet(void *) {
     }
     g_pending = pCount;
 
-    // Estado ao vivo -> dashboard (quando muda ou a cada LIVE_KEEPALIVE_MS)
+    // Estado ao vivo -> dashboard
     if (millis() - lastLive >= LIVE_PUSH_MIN_MS) {
       LiveState s = getLive();
       float kg; bool st;
@@ -677,9 +637,7 @@ static void taskNet(void *) {
   }
 }
 
-// ---------------------------------------------------------------------
 // Página de status local
-// ---------------------------------------------------------------------
 #if USE_LOCAL_WEB
 static void handleStatus() {
   LiveState s = getLive();
@@ -725,9 +683,7 @@ static void taskWeb(void *) {
 }
 #endif
 
-// ---------------------------------------------------------------------
 // Setup / loop
-// ---------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -758,9 +714,7 @@ void setup() {
   scale.tare(20);
   Serial.printf("[SCALE] fator=%.2f, tara ok\n", cal);
 
-  // Inicializa a pilha TCP/IP (lwIP) ANTES de criar as tasks: o taskWeb chama
-  // web.begin() (abre socket) e, se rodar antes do taskNet, o lwIP ainda não
-  // existe -> "assert failed: xQueueSemaphoreTake ... (pxQueue)".
+  // Inicia a rede antes das tasks
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
 

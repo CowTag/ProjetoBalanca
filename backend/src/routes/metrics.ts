@@ -10,7 +10,7 @@ import { firstAndLastWeights } from '../services/stats';
 
 export const metricsRouter = Router();
 
-/** GET /api/v1/metrics/overview?dias=14 — KPIs do dashboard */
+// KPIs do dashboard
 metricsRouter.get(
   '/overview',
   ah(async (req, res) => {

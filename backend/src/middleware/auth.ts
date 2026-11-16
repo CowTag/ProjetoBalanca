@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-// ---------------- Usuários (JWT) ----------------
+// Usuários (JWT)
 export function signToken(u: AuthUser): string {
   return jwt.sign(u, env.JWT_SECRET, { expiresIn: '12h' });
 }
@@ -51,10 +51,10 @@ export const requireRole =
     next();
   };
 
-/** fazenda do usuário logado */
+// Fazenda do usuário logado
 export const fid = (req: Request) => req.user!.fazenda_id;
 
-// ---------------- Dispositivos (X-Device-Key) ----------------
+// Dispositivos (X-Device-Key)
 export const hashKey = (k: string) => crypto.createHash('sha256').update(k).digest('hex');
 export const newDeviceKey = () => crypto.randomBytes(24).toString('base64url');
 

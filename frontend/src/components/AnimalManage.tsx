@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Button, ErrorBox, Field } from './ui';
 import { Modal } from './Modal';
 
-const hoje = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD no fuso local
+const hoje = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
 const soData = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
 
 function errMsg(e: unknown) {
@@ -20,9 +20,7 @@ function errMsg(e: unknown) {
   return 'Não foi possível salvar. Tente de novo.';
 }
 
-// ---------------------------------------------------------------------
 // Cadastro / edição
-// ---------------------------------------------------------------------
 type FormData = { tag_rfid: string; brinco_visual: string; raca: string; sexo: 'M' | 'F'; data_nascimento: string };
 
 export function AnimalForm({
@@ -97,9 +95,7 @@ export function AnimalForm({
   );
 }
 
-// ---------------------------------------------------------------------
-// Situação (ativo / vendido / óbito)
-// ---------------------------------------------------------------------
+// Situação
 const SITUACOES: { value: StatusAnimal; label: string; desc: string; icon: ReactNode; tone: string; obs: string }[] = [
   { value: 'ativo', label: 'Ativo', desc: 'Animal ativo no rebanho', icon: <CircleCheck size={18} strokeWidth={1.75} />, tone: 'border-pasto-500 bg-pasto-50 text-pasto-800', obs: '' },
   { value: 'vendido', label: 'Vendido', desc: 'Saiu do rebanho por venda', icon: <HandCoins size={18} strokeWidth={1.75} />, tone: 'border-slate-500 bg-ceu-100 text-slate-800', obs: 'Comprador, valor, nº da GTA…' },
@@ -183,9 +179,7 @@ function StatusModal({ animal, onClose, onSaved }: { animal: Animal; onClose: ()
   );
 }
 
-// ---------------------------------------------------------------------
-// Remoção (só admin) — exige digitar o brinco para confirmar
-// ---------------------------------------------------------------------
+// Remoção
 function DeleteModal({
   animal,
   onClose,
@@ -247,9 +241,7 @@ function DeleteModal({
   );
 }
 
-// ---------------------------------------------------------------------
-// Botões de ação (lista e ficha do animal)
-// ---------------------------------------------------------------------
+// Botões de ação
 type Open = null | 'edit' | 'status' | 'delete';
 
 export function AnimalActions({
@@ -341,7 +333,7 @@ export function AnimalActions({
   );
 }
 
-/** Linha "Vendido em 10/11/2026 · Comprador X" para animais fora do rebanho. */
+// Resumo da venda/óbito
 export function StatusInfo({ animal }: { animal: Animal }) {
   if (animal.status === 'ativo') return null;
   const label = animal.status === 'vendido' ? 'Vendido em' : 'Óbito em';
